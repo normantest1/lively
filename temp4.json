@@ -73,36 +73,22 @@
   "sentenceList": [
     {
       "number": 1,
-      "index": {
-        "start": 0,
-        "end": 38
-      },
       "identity": "narration",
       "emotion": "平静",
-    "roleName": ""
-    "feature": "",
-    "context":"苏宇一进家门便闻到了菜香味，丢下书包，走到餐桌前，随手拣起一块红烧肉扔进嘴里。"
+      "roleName": ""
+      "feature": "",
+      "context":"苏宇一进家门便闻到了菜香味，丢下书包，走到餐桌前，随手拣起一块红烧肉扔进嘴里。"
     },
     {
       "number": 2,
-      "index": {
-        "start": 39,
-        "end": 77
-      },
       "identity": "role",
       "emotion": "抱怨",
       "roleName": "苏宇"
       "feature": "一个18岁的少年，声音清脆"
-      "context":"一边咀嚼着，苏宇一边看向厨房含糊道：爸，明天换个汤，天天吃肉也不腻得慌。
-"
-
+      "context":"一边咀嚼着，苏宇一边看向厨房含糊道：爸，明天换个汤，天天吃肉也不腻得慌。"
     },
     {
       "number": 3,
-      "index": {
-        "start": 40,
-        "end": 103
-      },
       "identity": "role",
       "emotion": "反驳",
       "roleName": "苏龙"
@@ -111,10 +97,6 @@
     },
     {
       "number": 4,
-      "index": {
-        "start": 104,
-        "end": 153
-      },
       "identity": "role",
       "emotion": "大笑",
       "roleName": "苏宇"
@@ -124,10 +106,6 @@
     },
     {
       "number": 5,
-      "index": {
-        "start": 105,
-        "end": 176
-      },
       "identity": "narration",
       "emotion": "生气",
       "roleName": ""

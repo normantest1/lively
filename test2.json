@@ -1,0 +1,846 @@
+{
+  "roleList": [
+    {
+      "number": 1,
+      "count": 12,
+      "roleName": "苏宇",
+      "feature": "一个约18岁的少年，声音淡然沉稳，带着一丝自嘲"
+    },
+    {
+      "number": 2,
+      "count": 5,
+      "roleName": "陈浩",
+      "feature": "一个约18岁的少年，声音委屈，咋咋呼呼"
+    },
+    {
+      "number": 3,
+      "count": 2,
+      "roleName": "管理员",
+      "feature": "一个中年男性，声音打趣，温和"
+    },
+    {
+      "number": 4,
+      "count": 6,
+      "roleName": "刘玥",
+      "feature": "一个短发少女，声音关切，认真"
+    }
+  ],
+  "sentenceList": [
+    {
+      "number": 1,
+      "identity": "narration",
+      "emotion": "平静",
+      "roleName": "",
+      "feature": "",
+      "context": "报考处外。"
+    },
+    {
+      "number": 2,
+      "identity": "narration",
+      "emotion": "平静",
+      "roleName": "",
+      "feature": "",
+      "context": "苏宇走了几步，陡然回头，诧异道："
+    },
+    {
+      "number": 3,
+      "identity": "role",
+      "emotion": "诧异",
+      "roleName": "苏宇",
+      "feature": "一个约18岁的少年，声音淡然沉稳，带着一丝自嘲",
+      "context": "你还跟着我干嘛？"
+    },
+    {
+      "number": 4,
+      "identity": "role",
+      "emotion": "茫然",
+      "roleName": "陈浩",
+      "feature": "一个约18岁的少年，声音委屈，咋咋呼呼",
+      "context": "不是去上学吗？"
+    },
+    {
+      "number": 5,
+      "identity": "role",
+      "emotion": "果断",
+      "roleName": "苏宇",
+      "feature": "一个约18岁的少年，声音淡然沉稳，带着一丝自嘲",
+      "context": "我不去。"
+    },
+    {
+      "number": 6,
+      "identity": "role",
+      "emotion": "疑惑",
+      "roleName": "陈浩",
+      "feature": "一个约18岁的少年，声音委屈，咋咋呼呼",
+      "context": "不去……那你干嘛去？"
+    },
+    {
+      "number": 7,
+      "identity": "role",
+      "emotion": "委屈",
+      "roleName": "陈浩",
+      "feature": "一个约18岁的少年，声音委屈，咋咋呼呼",
+      "context": "刚刚你说要上学的，怎么又变卦了？"
+    },
+    {
+      "number": 8,
+      "identity": "role",
+      "emotion": "淡然",
+      "roleName": "苏宇",
+      "feature": "一个约18岁的少年，声音淡然沉稳，带着一丝自嘲",
+      "context": "图书馆。"
+    },
+    {
+      "number": 9,
+      "identity": "narration",
+      "emotion": "平静",
+      "roleName": "",
+      "feature": "",
+      "context": "苏宇说的淡然，其他课程我都不用上了，执教老师答应过的，我不去没关系，你不去……你准备这时候被请家长？"
+    },
+    {
+      "number": 10,
+      "identity": "narration",
+      "emotion": "扎心",
+      "roleName": "",
+      "feature": "",
+      "context": "太扎心了！"
+    },
+    {
+      "number": 11,
+      "identity": "narration",
+      "emotion": "无奈",
+      "roleName": "",
+      "feature": "",
+      "context": "陈浩掩面而逃，没错，苏宇这家伙可以不去上课的，执教老师特许的，他可不行。"
+    },
+    {
+      "number": 12,
+      "identity": "narration",
+      "emotion": "平静",
+      "roleName": "",
+      "feature": "",
+      "context": "至于修炼课程，苏宇开元三重也足够了，老师们都没想过他考战争学府，自然没人会督促他去修炼。"
+    },
+    {
+      "number": 13,
+      "identity": "narration",
+      "emotion": "失笑",
+      "roleName": "",
+      "feature": "",
+      "context": "看着陈浩离去，苏宇摇头失笑。"
+    },
+    {
+      "number": 14,
+      "identity": "narration",
+      "emotion": "平静",
+      "roleName": "",
+      "feature": "",
+      "context": "陈浩的父亲是自己父亲的老朋友，这家伙和自己又是同学，算得上是死党，不过这家伙咋咋呼呼的，跟这家伙一起脑壳疼。"
+    },
+    {
+      "number": 15,
+      "identity": "narration",
+      "emotion": "平静",
+      "roleName": "",
+      "feature": "",
+      "context": "图书馆。"
+    },
+    {
+      "number": 16,
+      "identity": "narration",
+      "emotion": "熟悉",
+      "roleName": "",
+      "feature": "",
+      "context": "管理员和苏宇很熟，苏宇经常来看书，一看就是半天，几年下来不熟都不行。"
+    },
+    {
+      "number": 17,
+      "identity": "role",
+      "emotion": "打趣",
+      "roleName": "管理员",
+      "feature": "一个中年男性，声音打趣，温和",
+      "context": "苏宇，万族语你都掌握十几门了，这时候不放松一下，还要苦学？"
+    },
+    {
+      "number": 18,
+      "identity": "narration",
+      "emotion": "平静",
+      "roleName": "",
+      "feature": "",
+      "context": "苏宇在南元中等学府也算不大不小的名人。"
+    },
+    {
+      "number": 19,
+      "identity": "narration",
+      "emotion": "平静",
+      "roleName": "",
+      "feature": "",
+      "context": "大多数学员，除了必须掌握的仙魔语、妖族语、通用语这三种之外，也没精力再去学其他语种了，苏宇倒好，小语种都学了不少。"
+    },
+    {
+      "number": 20,
+      "identity": "narration",
+      "emotion": "微笑",
+      "roleName": "",
+      "feature": "",
+      "context": "苏宇微笑应对，也没多说什么。"
+    },
+    {
+      "number": 21,
+      "identity": "narration",
+      "emotion": "平静",
+      "roleName": "",
+      "feature": "",
+      "context": "迈步走进图书馆，苏宇直奔三楼。"
+    },
+    {
+      "number": 22,
+      "identity": "narration",
+      "emotion": "平静",
+      "roleName": "",
+      "feature": "",
+      "context": "此刻是上课时间，图书馆空荡荡的，除了少数几位老师在看书查资料，几乎没学生。"
+    },
+    {
+      "number": 23,
+      "identity": "narration",
+      "emotion": "评价",
+      "roleName": "",
+      "feature": "",
+      "context": "大多数学员是宁愿苦修，也不想天天看各种鬼画符，能动武力解决的问题这些青少年才懒得用脑子去解决。"
+    },
+    {
+      "number": 24,
+      "identity": "narration",
+      "emotion": "平静",
+      "roleName": "",
+      "feature": "",
+      "context": "几位看书的老师看到苏宇，也没人招呼。"
+    },
+    {
+      "number": 25,
+      "identity": "narration",
+      "emotion": "专注",
+      "roleName": "",
+      "feature": "",
+      "context": "大家都习惯了安静，沉浸在自己的世界中。"
+    },
+    {
+      "number": 26,
+      "identity": "narration",
+      "emotion": "平静",
+      "roleName": "",
+      "feature": "",
+      "context": "苏宇也没和其他人打招呼，熟门熟路地走到了平时来的最多的一处书架旁，查看了一番，很快取出一本大部头：——《鯥鱼》"
+    },
+    {
+      "number": 27,
+      "identity": "narration",
+      "emotion": "平静",
+      "roleName": "",
+      "feature": "",
+      "context": "这是万族图册，人族将已经出现或者发现的种族资料进行记载汇聚，编辑成册，提供给整个人族学习了解。"
+    },
+    {
+      "number": 28,
+      "identity": "narration",
+      "emotion": "平静",
+      "roleName": "",
+      "feature": "",
+      "context": "当然，这只是其中一本。"
+    },
+    {
+      "number": 29,
+      "identity": "narration",
+      "emotion": "平静",
+      "roleName": "",
+      "feature": "",
+      "context": "万族图册可并非一本，而是一个系列，具体多少本苏宇不知道，有些是隐秘，特供一群人。"
+    },
+    {
+      "number": 30,
+      "identity": "narration",
+      "emotion": "平静",
+      "roleName": "",
+      "feature": "",
+      "context": "南元中等学府只有39本，涉及到39个种族。"
+    },
+    {
+      "number": 31,
+      "identity": "narration",
+      "emotion": "平静",
+      "roleName": "",
+      "feature": "",
+      "context": "这些图册包含很多东西，包括对方的外形，习惯，风俗，语言，甚至一些特殊功法，战斗方式，击杀方案……都有叙述。"
+    },
+    {
+      "number": 32,
+      "identity": "narration",
+      "emotion": "专注",
+      "roleName": "",
+      "feature": "",
+      "context": "苏宇此刻要了解的不是这些，而是翻到了扉页，每本万族图册扉页都是该种族的插图。"
+    },
+    {
+      "number": 33,
+      "identity": "narration",
+      "emotion": "惊讶",
+      "roleName": "",
+      "feature": "",
+      "context": "鯥鱼，听起来是鱼类，实际上并非如此。"
+    },
+    {
+      "number": 34,
+      "identity": "narration",
+      "emotion": "观察",
+      "roleName": "",
+      "feature": "",
+      "context": "翻开图册，苏宇盯着插图看了一会，这是一种长的像牛的物种。"
+    },
+    {
+      "number": 35,
+      "identity": "narration",
+      "emotion": "描述",
+      "roleName": "",
+      "feature": "",
+      "context": "当然，也不全像，对方的尾巴和蛇尾差不多，比牛还多了一双翅膀。"
+    },
+    {
+      "number": 36,
+      "identity": "narration",
+      "emotion": "平静",
+      "roleName": "",
+      "feature": "",
+      "context": "至于为什么要叫鯥鱼，据说这种生物是两栖种族，可以在水中或者海域生存，水战实力比陆战实力更强大。"
+    },
+    {
+      "number": 37,
+      "identity": "narration",
+      "emotion": "平静",
+      "roleName": "",
+      "feature": "",
+      "context": "至于长了翅膀，却不代表鯥鱼会飞，更像鸡翅，扑腾几下还行，飞是飞不起来的。"
+    },
+    {
+      "number": 38,
+      "identity": "narration",
+      "emotion": "介绍",
+      "roleName": "",
+      "feature": "",
+      "context": "鯥鱼之肉，吞服可驱毒，解毒圣品！"
+    },
+    {
+      "number": 39,
+      "identity": "narration",
+      "emotion": "警告",
+      "roleName": "",
+      "feature": "",
+      "context": "栖于柢山界，界域多丘陵水域，鯥鱼冬眠夏醒，夏日入柢山界，务必小心谨慎，危险程度极高！"
+    },
+    {
+      "number": 40,
+      "identity": "narration",
+      "emotion": "中立",
+      "roleName": "",
+      "feature": "",
+      "context": "诸天战场立场，中立，无故不得擅自击杀……"
+    },
+    {
+      "number": 41,
+      "identity": "narration",
+      "emotion": "思考",
+      "roleName": "",
+      "feature": "",
+      "context": "苏宇简单翻看了一下，其实这些资料他之前也看过，当然，他没学过鯥鱼种族语，这种种族语言很难，因为太小众，柢山界并非鯥鱼族为尊。"
+    },
+    {
+      "number": 42,
+      "identity": "narration",
+      "emotion": "专注",
+      "roleName": "",
+      "feature": "",
+      "context": "他看的也不是这个，主要还是插图。"
+    },
+    {
+      "number": 43,
+      "identity": "role",
+      "emotion": "呓语",
+      "roleName": "苏宇",
+      "feature": "一个约18岁的少年，声音淡然沉稳，带着一丝自嘲",
+      "context": "鯥鱼……"
+    },
+    {
+      "number": 44,
+      "identity": "narration",
+      "emotion": "疑惑",
+      "roleName": "",
+      "feature": "",
+      "context": "苏宇呓语一声，想到了昨夜的噩梦。"
+    },
+    {
+      "number": 45,
+      "identity": "narration",
+      "emotion": "反思",
+      "roleName": "",
+      "feature": "",
+      "context": "昨晚追杀自己的……是鯥鱼吗？"
+    },
+    {
+      "number": 46,
+      "identity": "narration",
+      "emotion": "平静",
+      "roleName": "",
+      "feature": "",
+      "context": "小时候做梦，他其实不会想太多，不过梦做多了，加上年纪上来了，他也尝试着去解析梦境，尝试着去查看资料。"
+    },
+    {
+      "number": 47,
+      "identity": "narration",
+      "emotion": "疑惑",
+      "roleName": "",
+      "feature": "",
+      "context": "梦中追杀自己的那些怪兽，到底是什么？"
+    },
+    {
+      "number": 48,
+      "identity": "narration",
+      "emotion": "质疑",
+      "roleName": "",
+      "feature": "",
+      "context": "现实中到底有没有？"
+    },
+    {
+      "number": 49,
+      "identity": "narration",
+      "emotion": "评价",
+      "roleName": "",
+      "feature": "",
+      "context": "这些年，别人都觉得他天才，肯下苦功夫去学诸天万族语，一学就是十八门，努力程度让人汗颜。"
+    },
+    {
+      "number": 50,
+      "identity": "narration",
+      "emotion": "澄清",
+      "roleName": "",
+      "feature": "",
+      "context": "实际情况并非如此，苏宇只是因为梦境的缘故，对诸天万族多了几分关注。"
+    },
+    {
+      "number": 51,
+      "identity": "narration",
+      "emotion": "解释",
+      "roleName": "",
+      "feature": "",
+      "context": "常年查看各种资料，为了了解更多，这才下了很大功夫去学习各种种族的语言和文字。"
+    },
+    {
+      "number": 52,
+      "identity": "role",
+      "emotion": "疑惑",
+      "roleName": "苏宇",
+      "feature": "一个约18岁的少年，声音淡然沉稳，带着一丝自嘲",
+      "context": "梦境太模糊，我不确定是不是鯥鱼，不过梦中那怪兽的确好像长着翅膀，叫声和牛差不多……"
+    },
+    {
+      "number": 53,
+      "identity": "narration",
+      "emotion": "不确定",
+      "roleName": "",
+      "feature": "",
+      "context": "苏宇心中自语，因为梦境很模糊，他并不能肯定。"
+    },
+    {
+      "number": 54,
+      "identity": "narration",
+      "emotion": "推理",
+      "roleName": "",
+      "feature": "",
+      "context": "然而这些年下来，他陆续也找到了一些资料，有时候能发现梦境中的那些怪物一些特征，和诸天万族其实能对应上。"
+    },
+    {
+      "number": 55,
+      "identity": "narration",
+      "emotion": "肯定",
+      "roleName": "",
+      "feature": "",
+      "context": "如此类推下去，苏宇觉得他其实没猜错，梦中追杀自己的就是诸天万族！"
+    },
+    {
+      "number": 56,
+      "identity": "narration",
+      "emotion": "感慨",
+      "roleName": "",
+      "feature": "",
+      "context": "十多年了，四五千个夜晚，他起码梦到了数千不同的怪物。"
+    },
+    {
+      "number": 57,
+      "identity": "narration",
+      "emotion": "反讽",
+      "roleName": "",
+      "feature": "",
+      "context": "若不是诸天万族的怪物，世间还存在那么多未知生物吗？"
+    },
+    {
+      "number": 58,
+      "identity": "role",
+      "emotion": "苦笑",
+      "roleName": "苏宇",
+      "feature": "一个约18岁的少年，声音淡然沉稳，带着一丝自嘲",
+      "context": "你们还真给面子，诸天万族梦中追杀我……"
+    },
+    {
+      "number": 59,
+      "identity": "role",
+      "emotion": "自嘲",
+      "roleName": "苏宇",
+      "feature": "一个约18岁的少年，声音淡然沉稳，带着一丝自嘲",
+      "context": "太给面子了。"
+    },
+    {
+      "number": 60,
+      "identity": "role",
+      "emotion": "不解",
+      "roleName": "苏宇",
+      "feature": "一个约18岁的少年，声音淡然沉稳，带着一丝自嘲",
+      "context": "我就一个小人物，犯得着诸天万族在梦中追杀自己吗？"
+    },
+    {
+      "number": 61,
+      "identity": "role",
+      "emotion": "愤怒",
+      "roleName": "苏宇",
+      "feature": "一个约18岁的少年，声音淡然沉稳，带着一丝自嘲",
+      "context": "很快，苏宇咬牙切齿，我都不认识你们，没见过你们，你们犯得着杀我吗？"
+    },
+    {
+      "number": 62,
+      "identity": "role",
+      "emotion": "愤怒",
+      "roleName": "苏宇",
+      "feature": "一个约18岁的少年，声音淡然沉稳，带着一丝自嘲",
+      "context": "折磨我一个普通人很快乐吗？"
+    },
+    {
+      "number": 63,
+      "identity": "role",
+      "emotion": "不解",
+      "roleName": "苏宇",
+      "feature": "一个约18岁的少年，声音淡然沉稳，带着一丝自嘲",
+      "context": "可是……到底为何会产生这样的梦境呢？"
+    },
+    {
+      "number": 64,
+      "identity": "narration",
+      "emotion": "矛盾",
+      "roleName": "",
+      "feature": "",
+      "context": "苏宇还是不解，若说自己见过那些种族，或者有过接触，他还能接受。"
+    },
+    {
+      "number": 65,
+      "identity": "narration",
+      "emotion": "疑惑",
+      "roleName": "",
+      "feature": "",
+      "context": "可他从未离开过南元城，撑死了在书上看到一些种族的资料，为何会和这些怪物产生联系？"
+    },
+    {
+      "number": 66,
+      "identity": "narration",
+      "emotion": "平静",
+      "roleName": "",
+      "feature": "",
+      "context": "大致确定了昨晚的梦境怪物是什么，苏宇将书籍归还原位。"
+    },
+    {
+      "number": 67,
+      "identity": "narration",
+      "emotion": "克制",
+      "roleName": "",
+      "feature": "",
+      "context": "有些事，他现在无法深入探究。"
+    },
+    {
+      "number": 68,
+      "identity": "narration",
+      "emotion": "平静",
+      "roleName": "",
+      "feature": "",
+      "context": "很快，苏宇离开了这个书架，这次来图书馆不单单是为了确定鯥鱼的事，还有别的事。"
+    },
+    {
+      "number": 69,
+      "identity": "narration",
+      "emotion": "平静",
+      "roleName": "",
+      "feature": "",
+      "context": "片刻后，苏宇走到了另外一个区域——开元区。"
+    },
+    {
+      "number": 70,
+      "identity": "narration",
+      "emotion": "介绍",
+      "roleName": "",
+      "feature": "",
+      "context": "这个区域的书籍，讲述的都是关于开元境修炼的问题。"
+    },
+    {
+      "number": 71,
+      "identity": "narration",
+      "emotion": "解释",
+      "roleName": "",
+      "feature": "",
+      "context": "人族接触修炼之始，主修《开元诀》。"
+    },
+    {
+      "number": 72,
+      "identity": "narration",
+      "emotion": "解释",
+      "roleName": "",
+      "feature": "",
+      "context": "虽然没开九窍，无法感受到元气，不过元气无处不在，可以吸纳一丝元气淬体，渐渐地开启九窍，从而踏入千钧境进行肉身修炼。"
+    },
+    {
+      "number": 73,
+      "identity": "narration",
+      "emotion": "说明",
+      "roleName": "",
+      "feature": "",
+      "context": "开启九窍的过程较为漫长，人族很小就开始修炼《开元诀》，这是循序渐进的过程，也是一个优胜劣汰的过程。"
+    },
+    {
+      "number": 74,
+      "identity": "narration",
+      "emotion": "评价",
+      "roleName": "",
+      "feature": "",
+      "context": "天才，这时候便可以迅速崛起。"
+    },
+    {
+      "number": 75,
+      "identity": "narration",
+      "emotion": "肯定",
+      "roleName": "",
+      "feature": "",
+      "context": "修炼资质强大，自然比别人更快一步。"
+    },
+    {
+      "number": 76,
+      "identity": "narration",
+      "emotion": "自信",
+      "roleName": "",
+      "feature": "",
+      "context": "苏宇并非修炼一道的白痴，这些书他很多都看过，也知道开元境主要便是顺其自然，并非苦修就能迅速突破境界的。"
+    },
+    {
+      "number": 77,
+      "identity": "narration",
+      "emotion": "希望",
+      "roleName": "",
+      "feature": "",
+      "context": "不过今天苏宇还是想查查看，有没有方法能更快的修炼。"
+    },
+    {
+      "number": 78,
+      "identity": "narration",
+      "emotion": "失望",
+      "roleName": "",
+      "feature": "",
+      "context": "翻找了一遍，苏宇一直没找到想要的书籍。"
+    },
+    {
+      "number": 79,
+      "identity": "narration",
+      "emotion": "担忧",
+      "roleName": "",
+      "feature": "",
+      "context": "微微蹙眉，难道这没有这方面的内容？"
+    },
+    {
+      "number": 80,
+      "identity": "narration",
+      "emotion": "绝望",
+      "roleName": "",
+      "feature": "",
+      "context": "若是如此，那自己想在考核之前达到开元四重，希望就不大了。"
+    },
+    {
+      "number": 81,
+      "identity": "role",
+      "emotion": "询问",
+      "roleName": "刘玥",
+      "feature": "一个短发少女，声音关切，认真",
+      "context": "苏宇，找什么呢？"
+    },
+    {
+      "number": 82,
+      "identity": "narration",
+      "emotion": "平静",
+      "roleName": "",
+      "feature": "",
+      "context": "就在这时，旁边一直在看书的一位短发女生忍不住问了一句。"
+    },
+    {
+      "number": 83,
+      "identity": "narration",
+      "emotion": "熟悉",
+      "roleName": "",
+      "feature": "",
+      "context": "她在这很久了，之前一直在看书。"
+    },
+    {
+      "number": 84,
+      "identity": "narration",
+      "emotion": "认识",
+      "roleName": "",
+      "feature": "",
+      "context": "她也认识苏宇，虽然不是一个班的，不过常来图书馆的也就这些人，时间久了，多少知道一些。"
+    },
+    {
+      "number": 85,
+      "identity": "narration",
+      "emotion": "歉意",
+      "roleName": "",
+      "feature": "",
+      "context": "苏宇露出歉色，自己打扰对方看书了。"
+    },
+    {
+      "number": 86,
+      "identity": "role",
+      "emotion": "说明",
+      "roleName": "苏宇",
+      "feature": "一个约18岁的少年，声音淡然沉稳，带着一丝自嘲",
+      "context": "我想找一些有关开元境加速修炼的记载，没找到。"
+    },
+    {
+      "number": 87,
+      "identity": "role",
+      "emotion": "疑问",
+      "roleName": "刘玥",
+      "feature": "一个短发少女，声音关切，认真",
+      "context": "加速修炼？"
+    },
+    {
+      "number": 88,
+      "identity": "narration",
+      "emotion": "沉吟",
+      "roleName": "",
+      "feature": "",
+      "context": "短发女生微微沉吟片刻，开口道。"
+    },
+    {
+      "number": 89,
+      "identity": "role",
+      "emotion": "解释",
+      "roleName": "刘玥",
+      "feature": "一个短发少女，声音关切，认真",
+      "context": "加速修炼的方案有，不过人族不建议在开元境用外道方式去加速，开元境是基础，开九窍，奠基的过程，这时候稳定为主，毕竟开元开元，开辟修炼之元！"
+    },
+    {
+      "number": 90,
+      "identity": "role",
+      "emotion": "担忧",
+      "roleName": "刘玥",
+      "feature": "一个短发少女，声音关切，认真",
+      "context": "苏宇，你不是考文明学府吗？这些不会考，你找这些，不会是想加速修炼吧？"
+    },
+    {
+      "number": 91,
+      "identity": "role",
+      "emotion": "警告",
+      "roleName": "刘玥",
+      "feature": "一个短发少女，声音关切，认真",
+      "context": "奠基不能乱，不然很容易出事的，就算顺利开元，对以后也有很大影响。"
+    },
+    {
+      "number": 92,
+      "identity": "role",
+      "emotion": "轻松",
+      "roleName": "苏宇",
+      "feature": "一个约18岁的少年，声音淡然沉稳，带着一丝自嘲",
+      "context": "我知道，我又不傻，就是想找找有没有安全一些的方案，若是没有也就算了。"
+    },
+    {
+      "number": 93,
+      "identity": "role",
+      "emotion": "思考",
+      "roleName": "刘玥",
+      "feature": "一个短发少女，声音关切，认真",
+      "context": "这样吗……"
+    },
+    {
+      "number": 94,
+      "identity": "narration",
+      "emotion": "指引",
+      "roleName": "",
+      "feature": "",
+      "context": "女生想了想，指了指角落处最底下的一排书架道。"
+    },
+    {
+      "number": 95,
+      "identity": "role",
+      "emotion": "提醒",
+      "roleName": "刘玥",
+      "feature": "一个短发少女，声音关切，认真",
+      "context": "那边有几本这方面的书籍，不过有些方法很极端，苏宇，你最好不要尝试，要不然真的很麻烦，甚至会死人的。"
+    },
+    {
+      "number": 96,
+      "identity": "role",
+      "emotion": "举例",
+      "roleName": "刘玥",
+      "feature": "一个短发少女，声音关切，认真",
+      "context": "安平历开启的时代，倒是有人族强者尝试过，因为那时候时不我待，他们没办法，只能如此，可那些前辈最终都没有走上无敌路，反而因为早年开元不当，早早陨落。"
+    },
+    {
+      "number": 97,
+      "identity": "role",
+      "emotion": "感谢",
+      "roleName": "苏宇",
+      "feature": "一个约18岁的少年，声音淡然沉稳，带着一丝自嘲",
+      "context": "谢谢，我知道了。"
+    },
+    {
+      "number": 98,
+      "identity": "narration",
+      "emotion": "平静",
+      "roleName": "",
+      "feature": "",
+      "context": "苏宇笑着点头，这女生叫刘玥，预考一班的学生。"
+    },
+    {
+      "number": 99,
+      "identity": "narration",
+      "emotion": "了解",
+      "roleName": "",
+      "feature": "",
+      "context": "苏宇对她了解的不多，不过对方经常会来图书馆看书，听说掌握的万族语也很多，到底掌握多少门，苏宇也不清楚，他也不爱打听这些事。"
+    },
+    {
+      "number": 100,
+      "identity": "narration",
+      "emotion": "推测",
+      "roleName": "",
+      "feature": "",
+      "context": "不出意外，对方应该会报考文明学府，所以对开元的境界提升倒是不太在意。"
+    },
+    {
+      "number": 101,
+      "identity": "narration",
+      "emotion": "行动",
+      "roleName": "",
+      "feature": "",
+      "context": "没和刘玥多说，苏宇很快在角落找到了刘玥说的那些书。"
+    },
+    {
+      "number": 102,
+      "identity": "narration",
+      "emotion": "列举",
+      "roleName": "",
+      "feature": "",
+      "context": "《开元境加速之法》、《开元之我见》、《论奠基重要性》……"
+    }
+  ]
+}

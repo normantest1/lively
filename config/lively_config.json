@@ -1,0 +1,9 @@
+{
+  "database_name": "lively_database",
+  "character_segmentation_size": 5000,
+  "api_key": "sk-cp-p2d06RXci2EZxJavRFpptAWoCT5y6UJCbNRFnrkLRL0-EdwdwogeH3siLguGSazQU0DGG50rIVW-FgFwYVxPqXU0fAzTZEmYHt4fm3NhdKD_wr3KVn5jejo",
+  "base_url": "https://api.minimaxi.com/anthropic",
+  "model_name": "MiniMax-M2.7",
+  "max_token": "8192",
+  "load_role_count": 10
+}
