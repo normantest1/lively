@@ -1,10 +1,9 @@
 import json
 import os
 from pathlib import Path
-import utils.common as common
 
-# 项目根目录
 ROOT_DIR = os.getcwd()
+
 def deep_find(obj, target_attr):
     if hasattr(obj, target_attr):
         return getattr(obj, target_attr)
@@ -24,6 +23,7 @@ def deep_find(obj, target_attr):
                 return result
 
     return None
+
 def load_config(path,field):
     with open(path,'r+',encoding="utf-8") as file:
         config = json.load(file)

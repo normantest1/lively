@@ -23,6 +23,7 @@ class BaseModel(Model):
 
 class Novel(BaseModel):
     id = AutoField(primary_key=True)
+    chapter_names = TextField(verbose_name="分片小说的章节名")
     section_data_json = TextField(verbose_name="分片数据，负责传给大模型分析的")
     after_analysis_data_json = TextField(verbose_name="大模型解析后的数据")
     create_time = DateTimeField(default=datetime.datetime.now, verbose_name="创建时间")
@@ -44,6 +45,7 @@ class Role(BaseModel):
     is_bind = BooleanField(verbose_name="是否绑定了对应的角色声音")
     bind_audio_name = CharField(max_length=100,verbose_name="对应角色声音的名称",index=True)
     chapter_count = IntegerField(verbose_name="对应章节的数量")
+    presence_rate = DoubleField(verbose_name="角色出场率")
     create_time = DateTimeField(default=datetime.datetime.now, verbose_name="创建时间")
     class Meta:
         table_name = 'roles'
@@ -63,6 +65,7 @@ class RoleAudio(BaseModel):
     gender = CharField(max_length=2,verbose_name="角色性别",index=True)
     audio_text = TextField(verbose_name="角色音频的文本内容")
     citation_count = IntegerField(verbose_name="角色音频被使用的次数")
+    audio_uri = TextField(verbose_name="项目播放路径")
     create_time = DateTimeField(default=datetime.datetime.now, verbose_name="创建时间")
     class Meta:
         table_name = 'role_audios'

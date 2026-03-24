@@ -1,846 +1,704 @@
-{
-  "roleList": [
-    {
-      "number": 1,
-      "count": 12,
-      "roleName": "苏宇",
-      "feature": "一个约18岁的少年，声音淡然沉稳，带着一丝自嘲"
-    },
-    {
-      "number": 2,
-      "count": 5,
-      "roleName": "陈浩",
-      "feature": "一个约18岁的少年，声音委屈，咋咋呼呼"
-    },
-    {
-      "number": 3,
-      "count": 2,
-      "roleName": "管理员",
-      "feature": "一个中年男性，声音打趣，温和"
-    },
-    {
-      "number": 4,
-      "count": 6,
-      "roleName": "刘玥",
-      "feature": "一个短发少女，声音关切，认真"
-    }
-  ],
-  "sentenceList": [
-    {
-      "number": 1,
-      "identity": "narration",
-      "emotion": "平静",
-      "roleName": "",
-      "feature": "",
-      "context": "报考处外。"
-    },
-    {
-      "number": 2,
-      "identity": "narration",
-      "emotion": "平静",
-      "roleName": "",
-      "feature": "",
-      "context": "苏宇走了几步，陡然回头，诧异道："
-    },
-    {
-      "number": 3,
-      "identity": "role",
-      "emotion": "诧异",
-      "roleName": "苏宇",
-      "feature": "一个约18岁的少年，声音淡然沉稳，带着一丝自嘲",
-      "context": "你还跟着我干嘛？"
-    },
-    {
-      "number": 4,
-      "identity": "role",
-      "emotion": "茫然",
-      "roleName": "陈浩",
-      "feature": "一个约18岁的少年，声音委屈，咋咋呼呼",
-      "context": "不是去上学吗？"
-    },
-    {
-      "number": 5,
-      "identity": "role",
-      "emotion": "果断",
-      "roleName": "苏宇",
-      "feature": "一个约18岁的少年，声音淡然沉稳，带着一丝自嘲",
-      "context": "我不去。"
-    },
-    {
-      "number": 6,
-      "identity": "role",
-      "emotion": "疑惑",
-      "roleName": "陈浩",
-      "feature": "一个约18岁的少年，声音委屈，咋咋呼呼",
-      "context": "不去……那你干嘛去？"
-    },
-    {
-      "number": 7,
-      "identity": "role",
-      "emotion": "委屈",
-      "roleName": "陈浩",
-      "feature": "一个约18岁的少年，声音委屈，咋咋呼呼",
-      "context": "刚刚你说要上学的，怎么又变卦了？"
-    },
-    {
-      "number": 8,
-      "identity": "role",
-      "emotion": "淡然",
-      "roleName": "苏宇",
-      "feature": "一个约18岁的少年，声音淡然沉稳，带着一丝自嘲",
-      "context": "图书馆。"
-    },
-    {
-      "number": 9,
-      "identity": "narration",
-      "emotion": "平静",
-      "roleName": "",
-      "feature": "",
-      "context": "苏宇说的淡然，其他课程我都不用上了，执教老师答应过的，我不去没关系，你不去……你准备这时候被请家长？"
-    },
-    {
-      "number": 10,
-      "identity": "narration",
-      "emotion": "扎心",
-      "roleName": "",
-      "feature": "",
-      "context": "太扎心了！"
-    },
-    {
-      "number": 11,
-      "identity": "narration",
-      "emotion": "无奈",
-      "roleName": "",
-      "feature": "",
-      "context": "陈浩掩面而逃，没错，苏宇这家伙可以不去上课的，执教老师特许的，他可不行。"
-    },
-    {
-      "number": 12,
-      "identity": "narration",
-      "emotion": "平静",
-      "roleName": "",
-      "feature": "",
-      "context": "至于修炼课程，苏宇开元三重也足够了，老师们都没想过他考战争学府，自然没人会督促他去修炼。"
-    },
-    {
-      "number": 13,
-      "identity": "narration",
-      "emotion": "失笑",
-      "roleName": "",
-      "feature": "",
-      "context": "看着陈浩离去，苏宇摇头失笑。"
-    },
-    {
-      "number": 14,
-      "identity": "narration",
-      "emotion": "平静",
-      "roleName": "",
-      "feature": "",
-      "context": "陈浩的父亲是自己父亲的老朋友，这家伙和自己又是同学，算得上是死党，不过这家伙咋咋呼呼的，跟这家伙一起脑壳疼。"
-    },
-    {
-      "number": 15,
-      "identity": "narration",
-      "emotion": "平静",
-      "roleName": "",
-      "feature": "",
-      "context": "图书馆。"
-    },
-    {
-      "number": 16,
-      "identity": "narration",
-      "emotion": "熟悉",
-      "roleName": "",
-      "feature": "",
-      "context": "管理员和苏宇很熟，苏宇经常来看书，一看就是半天，几年下来不熟都不行。"
-    },
-    {
-      "number": 17,
-      "identity": "role",
-      "emotion": "打趣",
-      "roleName": "管理员",
-      "feature": "一个中年男性，声音打趣，温和",
-      "context": "苏宇，万族语你都掌握十几门了，这时候不放松一下，还要苦学？"
-    },
-    {
-      "number": 18,
-      "identity": "narration",
-      "emotion": "平静",
-      "roleName": "",
-      "feature": "",
-      "context": "苏宇在南元中等学府也算不大不小的名人。"
-    },
-    {
-      "number": 19,
-      "identity": "narration",
-      "emotion": "平静",
-      "roleName": "",
-      "feature": "",
-      "context": "大多数学员，除了必须掌握的仙魔语、妖族语、通用语这三种之外，也没精力再去学其他语种了，苏宇倒好，小语种都学了不少。"
-    },
-    {
-      "number": 20,
-      "identity": "narration",
-      "emotion": "微笑",
-      "roleName": "",
-      "feature": "",
-      "context": "苏宇微笑应对，也没多说什么。"
-    },
-    {
-      "number": 21,
-      "identity": "narration",
-      "emotion": "平静",
-      "roleName": "",
-      "feature": "",
-      "context": "迈步走进图书馆，苏宇直奔三楼。"
-    },
-    {
-      "number": 22,
-      "identity": "narration",
-      "emotion": "平静",
-      "roleName": "",
-      "feature": "",
-      "context": "此刻是上课时间，图书馆空荡荡的，除了少数几位老师在看书查资料，几乎没学生。"
-    },
-    {
-      "number": 23,
-      "identity": "narration",
-      "emotion": "评价",
-      "roleName": "",
-      "feature": "",
-      "context": "大多数学员是宁愿苦修，也不想天天看各种鬼画符，能动武力解决的问题这些青少年才懒得用脑子去解决。"
-    },
-    {
-      "number": 24,
-      "identity": "narration",
-      "emotion": "平静",
-      "roleName": "",
-      "feature": "",
-      "context": "几位看书的老师看到苏宇，也没人招呼。"
-    },
-    {
-      "number": 25,
-      "identity": "narration",
-      "emotion": "专注",
-      "roleName": "",
-      "feature": "",
-      "context": "大家都习惯了安静，沉浸在自己的世界中。"
-    },
-    {
-      "number": 26,
-      "identity": "narration",
-      "emotion": "平静",
-      "roleName": "",
-      "feature": "",
-      "context": "苏宇也没和其他人打招呼，熟门熟路地走到了平时来的最多的一处书架旁，查看了一番，很快取出一本大部头：——《鯥鱼》"
-    },
-    {
-      "number": 27,
-      "identity": "narration",
-      "emotion": "平静",
-      "roleName": "",
-      "feature": "",
-      "context": "这是万族图册，人族将已经出现或者发现的种族资料进行记载汇聚，编辑成册，提供给整个人族学习了解。"
-    },
-    {
-      "number": 28,
-      "identity": "narration",
-      "emotion": "平静",
-      "roleName": "",
-      "feature": "",
-      "context": "当然，这只是其中一本。"
-    },
-    {
-      "number": 29,
-      "identity": "narration",
-      "emotion": "平静",
-      "roleName": "",
-      "feature": "",
-      "context": "万族图册可并非一本，而是一个系列，具体多少本苏宇不知道，有些是隐秘，特供一群人。"
-    },
-    {
-      "number": 30,
-      "identity": "narration",
-      "emotion": "平静",
-      "roleName": "",
-      "feature": "",
-      "context": "南元中等学府只有39本，涉及到39个种族。"
-    },
-    {
-      "number": 31,
-      "identity": "narration",
-      "emotion": "平静",
-      "roleName": "",
-      "feature": "",
-      "context": "这些图册包含很多东西，包括对方的外形，习惯，风俗，语言，甚至一些特殊功法，战斗方式，击杀方案……都有叙述。"
-    },
-    {
-      "number": 32,
-      "identity": "narration",
-      "emotion": "专注",
-      "roleName": "",
-      "feature": "",
-      "context": "苏宇此刻要了解的不是这些，而是翻到了扉页，每本万族图册扉页都是该种族的插图。"
-    },
-    {
-      "number": 33,
-      "identity": "narration",
-      "emotion": "惊讶",
-      "roleName": "",
-      "feature": "",
-      "context": "鯥鱼，听起来是鱼类，实际上并非如此。"
-    },
-    {
-      "number": 34,
-      "identity": "narration",
-      "emotion": "观察",
-      "roleName": "",
-      "feature": "",
-      "context": "翻开图册，苏宇盯着插图看了一会，这是一种长的像牛的物种。"
-    },
-    {
-      "number": 35,
-      "identity": "narration",
-      "emotion": "描述",
-      "roleName": "",
-      "feature": "",
-      "context": "当然，也不全像，对方的尾巴和蛇尾差不多，比牛还多了一双翅膀。"
-    },
-    {
-      "number": 36,
-      "identity": "narration",
-      "emotion": "平静",
-      "roleName": "",
-      "feature": "",
-      "context": "至于为什么要叫鯥鱼，据说这种生物是两栖种族，可以在水中或者海域生存，水战实力比陆战实力更强大。"
-    },
-    {
-      "number": 37,
-      "identity": "narration",
-      "emotion": "平静",
-      "roleName": "",
-      "feature": "",
-      "context": "至于长了翅膀，却不代表鯥鱼会飞，更像鸡翅，扑腾几下还行，飞是飞不起来的。"
-    },
-    {
-      "number": 38,
-      "identity": "narration",
-      "emotion": "介绍",
-      "roleName": "",
-      "feature": "",
-      "context": "鯥鱼之肉，吞服可驱毒，解毒圣品！"
-    },
-    {
-      "number": 39,
-      "identity": "narration",
-      "emotion": "警告",
-      "roleName": "",
-      "feature": "",
-      "context": "栖于柢山界，界域多丘陵水域，鯥鱼冬眠夏醒，夏日入柢山界，务必小心谨慎，危险程度极高！"
-    },
-    {
-      "number": 40,
-      "identity": "narration",
-      "emotion": "中立",
-      "roleName": "",
-      "feature": "",
-      "context": "诸天战场立场，中立，无故不得擅自击杀……"
-    },
-    {
-      "number": 41,
-      "identity": "narration",
-      "emotion": "思考",
-      "roleName": "",
-      "feature": "",
-      "context": "苏宇简单翻看了一下，其实这些资料他之前也看过，当然，他没学过鯥鱼种族语，这种种族语言很难，因为太小众，柢山界并非鯥鱼族为尊。"
-    },
-    {
-      "number": 42,
-      "identity": "narration",
-      "emotion": "专注",
-      "roleName": "",
-      "feature": "",
-      "context": "他看的也不是这个，主要还是插图。"
-    },
-    {
-      "number": 43,
-      "identity": "role",
-      "emotion": "呓语",
-      "roleName": "苏宇",
-      "feature": "一个约18岁的少年，声音淡然沉稳，带着一丝自嘲",
-      "context": "鯥鱼……"
-    },
-    {
-      "number": 44,
-      "identity": "narration",
-      "emotion": "疑惑",
-      "roleName": "",
-      "feature": "",
-      "context": "苏宇呓语一声，想到了昨夜的噩梦。"
-    },
-    {
-      "number": 45,
-      "identity": "narration",
-      "emotion": "反思",
-      "roleName": "",
-      "feature": "",
-      "context": "昨晚追杀自己的……是鯥鱼吗？"
-    },
-    {
-      "number": 46,
-      "identity": "narration",
-      "emotion": "平静",
-      "roleName": "",
-      "feature": "",
-      "context": "小时候做梦，他其实不会想太多，不过梦做多了，加上年纪上来了，他也尝试着去解析梦境，尝试着去查看资料。"
-    },
-    {
-      "number": 47,
-      "identity": "narration",
-      "emotion": "疑惑",
-      "roleName": "",
-      "feature": "",
-      "context": "梦中追杀自己的那些怪兽，到底是什么？"
-    },
-    {
-      "number": 48,
-      "identity": "narration",
-      "emotion": "质疑",
-      "roleName": "",
-      "feature": "",
-      "context": "现实中到底有没有？"
-    },
-    {
-      "number": 49,
-      "identity": "narration",
-      "emotion": "评价",
-      "roleName": "",
-      "feature": "",
-      "context": "这些年，别人都觉得他天才，肯下苦功夫去学诸天万族语，一学就是十八门，努力程度让人汗颜。"
-    },
-    {
-      "number": 50,
-      "identity": "narration",
-      "emotion": "澄清",
-      "roleName": "",
-      "feature": "",
-      "context": "实际情况并非如此，苏宇只是因为梦境的缘故，对诸天万族多了几分关注。"
-    },
-    {
-      "number": 51,
-      "identity": "narration",
-      "emotion": "解释",
-      "roleName": "",
-      "feature": "",
-      "context": "常年查看各种资料，为了了解更多，这才下了很大功夫去学习各种种族的语言和文字。"
-    },
-    {
-      "number": 52,
-      "identity": "role",
-      "emotion": "疑惑",
-      "roleName": "苏宇",
-      "feature": "一个约18岁的少年，声音淡然沉稳，带着一丝自嘲",
-      "context": "梦境太模糊，我不确定是不是鯥鱼，不过梦中那怪兽的确好像长着翅膀，叫声和牛差不多……"
-    },
-    {
-      "number": 53,
-      "identity": "narration",
-      "emotion": "不确定",
-      "roleName": "",
-      "feature": "",
-      "context": "苏宇心中自语，因为梦境很模糊，他并不能肯定。"
-    },
-    {
-      "number": 54,
-      "identity": "narration",
-      "emotion": "推理",
-      "roleName": "",
-      "feature": "",
-      "context": "然而这些年下来，他陆续也找到了一些资料，有时候能发现梦境中的那些怪物一些特征，和诸天万族其实能对应上。"
-    },
-    {
-      "number": 55,
-      "identity": "narration",
-      "emotion": "肯定",
-      "roleName": "",
-      "feature": "",
-      "context": "如此类推下去，苏宇觉得他其实没猜错，梦中追杀自己的就是诸天万族！"
-    },
-    {
-      "number": 56,
-      "identity": "narration",
-      "emotion": "感慨",
-      "roleName": "",
-      "feature": "",
-      "context": "十多年了，四五千个夜晚，他起码梦到了数千不同的怪物。"
-    },
-    {
-      "number": 57,
-      "identity": "narration",
-      "emotion": "反讽",
-      "roleName": "",
-      "feature": "",
-      "context": "若不是诸天万族的怪物，世间还存在那么多未知生物吗？"
-    },
-    {
-      "number": 58,
-      "identity": "role",
-      "emotion": "苦笑",
-      "roleName": "苏宇",
-      "feature": "一个约18岁的少年，声音淡然沉稳，带着一丝自嘲",
-      "context": "你们还真给面子，诸天万族梦中追杀我……"
-    },
-    {
-      "number": 59,
-      "identity": "role",
-      "emotion": "自嘲",
-      "roleName": "苏宇",
-      "feature": "一个约18岁的少年，声音淡然沉稳，带着一丝自嘲",
-      "context": "太给面子了。"
-    },
-    {
-      "number": 60,
-      "identity": "role",
-      "emotion": "不解",
-      "roleName": "苏宇",
-      "feature": "一个约18岁的少年，声音淡然沉稳，带着一丝自嘲",
-      "context": "我就一个小人物，犯得着诸天万族在梦中追杀自己吗？"
-    },
-    {
-      "number": 61,
-      "identity": "role",
-      "emotion": "愤怒",
-      "roleName": "苏宇",
-      "feature": "一个约18岁的少年，声音淡然沉稳，带着一丝自嘲",
-      "context": "很快，苏宇咬牙切齿，我都不认识你们，没见过你们，你们犯得着杀我吗？"
-    },
-    {
-      "number": 62,
-      "identity": "role",
-      "emotion": "愤怒",
-      "roleName": "苏宇",
-      "feature": "一个约18岁的少年，声音淡然沉稳，带着一丝自嘲",
-      "context": "折磨我一个普通人很快乐吗？"
-    },
-    {
-      "number": 63,
-      "identity": "role",
-      "emotion": "不解",
-      "roleName": "苏宇",
-      "feature": "一个约18岁的少年，声音淡然沉稳，带着一丝自嘲",
-      "context": "可是……到底为何会产生这样的梦境呢？"
-    },
-    {
-      "number": 64,
-      "identity": "narration",
-      "emotion": "矛盾",
-      "roleName": "",
-      "feature": "",
-      "context": "苏宇还是不解，若说自己见过那些种族，或者有过接触，他还能接受。"
-    },
-    {
-      "number": 65,
-      "identity": "narration",
-      "emotion": "疑惑",
-      "roleName": "",
-      "feature": "",
-      "context": "可他从未离开过南元城，撑死了在书上看到一些种族的资料，为何会和这些怪物产生联系？"
-    },
-    {
-      "number": 66,
-      "identity": "narration",
-      "emotion": "平静",
-      "roleName": "",
-      "feature": "",
-      "context": "大致确定了昨晚的梦境怪物是什么，苏宇将书籍归还原位。"
-    },
-    {
-      "number": 67,
-      "identity": "narration",
-      "emotion": "克制",
-      "roleName": "",
-      "feature": "",
-      "context": "有些事，他现在无法深入探究。"
-    },
-    {
-      "number": 68,
-      "identity": "narration",
-      "emotion": "平静",
-      "roleName": "",
-      "feature": "",
-      "context": "很快，苏宇离开了这个书架，这次来图书馆不单单是为了确定鯥鱼的事，还有别的事。"
-    },
-    {
-      "number": 69,
-      "identity": "narration",
-      "emotion": "平静",
-      "roleName": "",
-      "feature": "",
-      "context": "片刻后，苏宇走到了另外一个区域——开元区。"
-    },
-    {
-      "number": 70,
-      "identity": "narration",
-      "emotion": "介绍",
-      "roleName": "",
-      "feature": "",
-      "context": "这个区域的书籍，讲述的都是关于开元境修炼的问题。"
-    },
-    {
-      "number": 71,
-      "identity": "narration",
-      "emotion": "解释",
-      "roleName": "",
-      "feature": "",
-      "context": "人族接触修炼之始，主修《开元诀》。"
-    },
-    {
-      "number": 72,
-      "identity": "narration",
-      "emotion": "解释",
-      "roleName": "",
-      "feature": "",
-      "context": "虽然没开九窍，无法感受到元气，不过元气无处不在，可以吸纳一丝元气淬体，渐渐地开启九窍，从而踏入千钧境进行肉身修炼。"
-    },
-    {
-      "number": 73,
-      "identity": "narration",
-      "emotion": "说明",
-      "roleName": "",
-      "feature": "",
-      "context": "开启九窍的过程较为漫长，人族很小就开始修炼《开元诀》，这是循序渐进的过程，也是一个优胜劣汰的过程。"
-    },
-    {
-      "number": 74,
-      "identity": "narration",
-      "emotion": "评价",
-      "roleName": "",
-      "feature": "",
-      "context": "天才，这时候便可以迅速崛起。"
-    },
-    {
-      "number": 75,
-      "identity": "narration",
-      "emotion": "肯定",
-      "roleName": "",
-      "feature": "",
-      "context": "修炼资质强大，自然比别人更快一步。"
-    },
-    {
-      "number": 76,
-      "identity": "narration",
-      "emotion": "自信",
-      "roleName": "",
-      "feature": "",
-      "context": "苏宇并非修炼一道的白痴，这些书他很多都看过，也知道开元境主要便是顺其自然，并非苦修就能迅速突破境界的。"
-    },
-    {
-      "number": 77,
-      "identity": "narration",
-      "emotion": "希望",
-      "roleName": "",
-      "feature": "",
-      "context": "不过今天苏宇还是想查查看，有没有方法能更快的修炼。"
-    },
-    {
-      "number": 78,
-      "identity": "narration",
-      "emotion": "失望",
-      "roleName": "",
-      "feature": "",
-      "context": "翻找了一遍，苏宇一直没找到想要的书籍。"
-    },
-    {
-      "number": 79,
-      "identity": "narration",
-      "emotion": "担忧",
-      "roleName": "",
-      "feature": "",
-      "context": "微微蹙眉，难道这没有这方面的内容？"
-    },
-    {
-      "number": 80,
-      "identity": "narration",
-      "emotion": "绝望",
-      "roleName": "",
-      "feature": "",
-      "context": "若是如此，那自己想在考核之前达到开元四重，希望就不大了。"
-    },
-    {
-      "number": 81,
-      "identity": "role",
-      "emotion": "询问",
-      "roleName": "刘玥",
-      "feature": "一个短发少女，声音关切，认真",
-      "context": "苏宇，找什么呢？"
-    },
-    {
-      "number": 82,
-      "identity": "narration",
-      "emotion": "平静",
-      "roleName": "",
-      "feature": "",
-      "context": "就在这时，旁边一直在看书的一位短发女生忍不住问了一句。"
-    },
-    {
-      "number": 83,
-      "identity": "narration",
-      "emotion": "熟悉",
-      "roleName": "",
-      "feature": "",
-      "context": "她在这很久了，之前一直在看书。"
-    },
-    {
-      "number": 84,
-      "identity": "narration",
-      "emotion": "认识",
-      "roleName": "",
-      "feature": "",
-      "context": "她也认识苏宇，虽然不是一个班的，不过常来图书馆的也就这些人，时间久了，多少知道一些。"
-    },
-    {
-      "number": 85,
-      "identity": "narration",
-      "emotion": "歉意",
-      "roleName": "",
-      "feature": "",
-      "context": "苏宇露出歉色，自己打扰对方看书了。"
-    },
-    {
-      "number": 86,
-      "identity": "role",
-      "emotion": "说明",
-      "roleName": "苏宇",
-      "feature": "一个约18岁的少年，声音淡然沉稳，带着一丝自嘲",
-      "context": "我想找一些有关开元境加速修炼的记载，没找到。"
-    },
-    {
-      "number": 87,
-      "identity": "role",
-      "emotion": "疑问",
-      "roleName": "刘玥",
-      "feature": "一个短发少女，声音关切，认真",
-      "context": "加速修炼？"
-    },
-    {
-      "number": 88,
-      "identity": "narration",
-      "emotion": "沉吟",
-      "roleName": "",
-      "feature": "",
-      "context": "短发女生微微沉吟片刻，开口道。"
-    },
-    {
-      "number": 89,
-      "identity": "role",
-      "emotion": "解释",
-      "roleName": "刘玥",
-      "feature": "一个短发少女，声音关切，认真",
-      "context": "加速修炼的方案有，不过人族不建议在开元境用外道方式去加速，开元境是基础，开九窍，奠基的过程，这时候稳定为主，毕竟开元开元，开辟修炼之元！"
-    },
-    {
-      "number": 90,
-      "identity": "role",
-      "emotion": "担忧",
-      "roleName": "刘玥",
-      "feature": "一个短发少女，声音关切，认真",
-      "context": "苏宇，你不是考文明学府吗？这些不会考，你找这些，不会是想加速修炼吧？"
-    },
-    {
-      "number": 91,
-      "identity": "role",
-      "emotion": "警告",
-      "roleName": "刘玥",
-      "feature": "一个短发少女，声音关切，认真",
-      "context": "奠基不能乱，不然很容易出事的，就算顺利开元，对以后也有很大影响。"
-    },
-    {
-      "number": 92,
-      "identity": "role",
-      "emotion": "轻松",
-      "roleName": "苏宇",
-      "feature": "一个约18岁的少年，声音淡然沉稳，带着一丝自嘲",
-      "context": "我知道，我又不傻，就是想找找有没有安全一些的方案，若是没有也就算了。"
-    },
-    {
-      "number": 93,
-      "identity": "role",
-      "emotion": "思考",
-      "roleName": "刘玥",
-      "feature": "一个短发少女，声音关切，认真",
-      "context": "这样吗……"
-    },
-    {
-      "number": 94,
-      "identity": "narration",
-      "emotion": "指引",
-      "roleName": "",
-      "feature": "",
-      "context": "女生想了想，指了指角落处最底下的一排书架道。"
-    },
-    {
-      "number": 95,
-      "identity": "role",
-      "emotion": "提醒",
-      "roleName": "刘玥",
-      "feature": "一个短发少女，声音关切，认真",
-      "context": "那边有几本这方面的书籍，不过有些方法很极端，苏宇，你最好不要尝试，要不然真的很麻烦，甚至会死人的。"
-    },
-    {
-      "number": 96,
-      "identity": "role",
-      "emotion": "举例",
-      "roleName": "刘玥",
-      "feature": "一个短发少女，声音关切，认真",
-      "context": "安平历开启的时代，倒是有人族强者尝试过，因为那时候时不我待，他们没办法，只能如此，可那些前辈最终都没有走上无敌路，反而因为早年开元不当，早早陨落。"
-    },
-    {
-      "number": 97,
-      "identity": "role",
-      "emotion": "感谢",
-      "roleName": "苏宇",
-      "feature": "一个约18岁的少年，声音淡然沉稳，带着一丝自嘲",
-      "context": "谢谢，我知道了。"
-    },
-    {
-      "number": 98,
-      "identity": "narration",
-      "emotion": "平静",
-      "roleName": "",
-      "feature": "",
-      "context": "苏宇笑着点头，这女生叫刘玥，预考一班的学生。"
-    },
-    {
-      "number": 99,
-      "identity": "narration",
-      "emotion": "了解",
-      "roleName": "",
-      "feature": "",
-      "context": "苏宇对她了解的不多，不过对方经常会来图书馆看书，听说掌握的万族语也很多，到底掌握多少门，苏宇也不清楚，他也不爱打听这些事。"
-    },
-    {
-      "number": 100,
-      "identity": "narration",
-      "emotion": "推测",
-      "roleName": "",
-      "feature": "",
-      "context": "不出意外，对方应该会报考文明学府，所以对开元的境界提升倒是不太在意。"
-    },
-    {
-      "number": 101,
-      "identity": "narration",
-      "emotion": "行动",
-      "roleName": "",
-      "feature": "",
-      "context": "没和刘玥多说，苏宇很快在角落找到了刘玥说的那些书。"
-    },
-    {
-      "number": 102,
-      "identity": "narration",
-      "emotion": "列举",
-      "roleName": "",
-      "feature": "",
-      "context": "《开元境加速之法》、《开元之我见》、《论奠基重要性》……"
-    }
-  ]
-}
+[
+  {
+    "role_name": "",
+    "text": "第一章 孟川和云青萍 ",
+    "type": "narration",
+    "bind_role_audio_name": ""
+  },
+  {
+    "role_name": "",
+    "text": "大周王朝，吴州，东宁府。",
+    "type": "narration",
+    "bind_role_audio_name": ""
+  },
+  {
+    "role_name": "",
+    "text": "东宁府城八大道院之一的‘镜湖道院’正门，一名腰间佩刀的少年从道院中走出。",
+    "type": "narration",
+    "bind_role_audio_name": ""
+  },
+  {
+    "role_name": "孟川",
+    "text": "“孟师兄。”",
+    "type": "role",
+    "bind_role_audio_name": "桑博"
+  },
+  {
+    "role_name": "孟川",
+    "text": "“孟师兄好。”",
+    "type": "role",
+    "bind_role_audio_name": "桑博"
+  },
+  {
+    "role_name": "孟川",
+    "text": "“见过孟师兄。”",
+    "type": "role",
+    "bind_role_audio_name": "桑博"
+  },
+  {
+    "role_name": "",
+    "text": "周围的其他同门们都颇为热情。",
+    "type": "narration",
+    "bind_role_audio_name": ""
+  },
+  {
+    "role_name": "",
+    "text": "少年孟川向这些师弟师妹们微微点头，其实这些‘师弟师妹们’很多都比他年龄更大，不过镜湖道院的规矩是达者为先，他早在两年前就已经进入镜湖道院‘山水楼’，山水楼二十二位弟子，也是镜湖道院最强的二十二位，受众多师弟师妹们仰慕向往。而其中‘孟师兄’尤为受推崇，是因为孟师兄偶尔会会指点他们，其他山水楼师兄师姐却懒得浪费时间在他人身上。",
+    "type": "narration",
+    "bind_role_audio_name": ""
+  },
+  {
+    "role_name": "",
+    "text": "“公子，公子。”忽然一道熟悉的声音从旁边传来。",
+    "type": "narration",
+    "bind_role_audio_name": ""
+  },
+  {
+    "role_name": "孟川",
+    "text": "从一旁跑出来一名绿衣少女，孟川见状笑了：“绿竹，你怎么来了？”",
+    "type": "role",
+    "bind_role_audio_name": "桑博"
+  },
+  {
+    "role_name": "绿竹",
+    "text": "“我家小姐想要请公子一起去东山游玩，昨夜刚刚一场大雪，雪后的东山可美得很。”绿衣少女笑道。",
+    "type": "role",
+    "bind_role_audio_name": "奈奈见"
+  },
+  {
+    "role_name": "孟川",
+    "text": "“去东山游玩？”孟川眉头一凝，说道，“东山太远了，去一趟怕是要在东山过夜了，等明日才能回来。”",
+    "type": "role",
+    "bind_role_audio_name": "桑博"
+  },
+  {
+    "role_name": "绿竹",
+    "text": "绿衣少女笑道：“我云家在东山恰好有一处别院，可以在那过夜。”",
+    "type": "role",
+    "bind_role_audio_name": "蒙派"
+  },
+  {
+    "role_name": "孟川",
+    "text": "孟川摇头道：“回去告诉青萍，就说一个多月后就是玉阳宫斩妖盛会，我需潜心修行以做准备，无法陪她过去。”",
+    "type": "role",
+    "bind_role_audio_name": "桑博"
+  },
+  {
+    "role_name": "绿竹",
+    "text": "“这……”绿衣少女犹豫。",
+    "type": "role",
+    "bind_role_audio_name": "三月七"
+  },
+  {
+    "role_name": "孟川",
+    "text": "“你回去直接说就是了。”孟川吩咐道，“还有，让青萍多花点时间修行，别总是想着出去游玩。”",
+    "type": "role",
+    "bind_role_audio_name": "桑博"
+  },
+  {
+    "role_name": "绿竹",
+    "text": "“是。”绿衣少女只能乖乖应着，回去禀报。",
+    "type": "role",
+    "bind_role_audio_name": "希露瓦"
+  },
+  {
+    "role_name": "",
+    "text": "孟川微微摇头。",
+    "type": "narration",
+    "bind_role_audio_name": ""
+  },
+  {
+    "role_name": "",
+    "text": "对于从小定下婚约的‘云青萍’他也有些头疼。",
+    "type": "narration",
+    "bind_role_audio_name": ""
+  },
+  {
+    "role_name": "",
+    "text": "……",
+    "type": "narration",
+    "bind_role_audio_name": ""
+  },
+  {
+    "role_name": "",
+    "text": "镜湖道院是建造在镜湖东岸，在镜湖西岸还有许多府宅，其中就有一座‘孟府’。",
+    "type": "narration",
+    "bind_role_audio_name": ""
+  },
+  {
+    "role_name": "孟川",
+    "text": "“少爷。”府门口有两名守卫，看到孟川便颇为恭敬。",
+    "type": "role",
+    "bind_role_audio_name": "桑博"
+  },
+  {
+    "role_name": "孟川",
+    "text": "“我爹在府里么？”孟川问道。",
+    "type": "role",
+    "bind_role_audio_name": "桑博"
+  },
+  {
+    "role_name": "孟川",
+    "text": "“刚刚祖宅那边派人来，老爷便立即赶去了。”守卫说道。",
+    "type": "role",
+    "bind_role_audio_name": "桑博"
+  },
+  {
+    "role_name": "",
+    "text": "孟川若有所思点点头，便进入府中。",
+    "type": "narration",
+    "bind_role_audio_name": ""
+  },
+  {
+    "role_name": "",
+    "text": "“咻咻咻！！！”很快便依稀听到箭矢的声音，孟川循声来到了练武场。",
+    "type": "narration",
+    "bind_role_audio_name": ""
+  },
+  {
+    "role_name": "",
+    "text": "练武场正有一名红衣少女在弯弓射箭，一根根箭矢，瞬间穿过数十丈接连射在靶子上，且后一箭都射在前一箭箭杆上。",
+    "type": "narration",
+    "bind_role_audio_name": ""
+  },
+  {
+    "role_name": "",
+    "text": "孟川在一旁看着对方练箭。",
+    "type": "narration",
+    "bind_role_audio_name": ""
+  },
+  {
+    "role_name": "",
+    "text": "她叫柳七月，是自己父亲的生死兄弟‘柳夜白’的独女。",
+    "type": "narration",
+    "bind_role_audio_name": ""
+  },
+  {
+    "role_name": "",
+    "text": "自己八岁那年……",
+    "type": "narration",
+    "bind_role_audio_name": ""
+  },
+  {
+    "role_name": "",
+    "text": "柳夜白带着女儿来到了孟府，从此便住下。",
+    "type": "narration",
+    "bind_role_audio_name": ""
+  },
+  {
+    "role_name": "",
+    "text": "七月和自己很像，都是很小就没了母亲。从小，七月就和自己一同修炼，一直修炼至今，感情极深。",
+    "type": "narration",
+    "bind_role_audio_name": ""
+  },
+  {
+    "role_name": "柳七月",
+    "text": "“阿川，你回来了。”红衣少女看到孟川眼睛一亮，“射这些靶子真没意思，来来来，赶紧给我当靶子。如果不是为了等你，我早去道院练箭了，道院的弓箭场可比这大多了。”",
+    "type": "role",
+    "bind_role_audio_name": "艾丝妲"
+  },
+  {
+    "role_name": "孟川",
+    "text": "“好，给你当靶子。”",
+    "type": "role",
+    "bind_role_audio_name": "桑博"
+  },
+  {
+    "role_name": "",
+    "text": "孟川笑着走到练武场中央。",
+    "type": "narration",
+    "bind_role_audio_name": ""
+  },
+  {
+    "role_name": "柳七月",
+    "text": "红衣少女换了一箭囊，箭矢也都是没有箭头的，她眼睛放光看着孟川：“阿川，你可得小心了，别又被我揍得鼻青脸肿。”",
+    "type": "role",
+    "bind_role_audio_name": "艾丝妲"
+  },
+  {
+    "role_name": "孟川",
+    "text": "“你也小心，我这次定要破了你的七星连珠箭。”孟川凝神以待。",
+    "type": "role",
+    "bind_role_audio_name": "桑博"
+  },
+  {
+    "role_name": "",
+    "text": "红衣少女嘻嘻一笑，跟着手指犹如幻影，瞬间拉弓射箭，似乎都不需要瞄准。",
+    "type": "narration",
+    "bind_role_audio_name": ""
+  },
+  {
+    "role_name": "",
+    "text": "咻咻咻！！！一箭又一箭，接连射出。每一次从背后箭囊取箭拉弓射箭，再取箭拉弓射箭……就仿佛正常人呼吸一般自然，一根根箭矢也快得惊人，威力同样极大。",
+    "type": "narration",
+    "bind_role_audio_name": ""
+  },
+  {
+    "role_name": "",
+    "text": "“噗噗噗。”孟川腰间的刀已经出鞘。",
+    "type": "narration",
+    "bind_role_audio_name": ""
+  },
+  {
+    "role_name": "",
+    "text": "刀走弧线，在面前隐隐形成一片领域，凡是箭矢射来都会被阻挡下。",
+    "type": "narration",
+    "bind_role_audio_name": ""
+  },
+  {
+    "role_name": "柳七月",
+    "text": "“阿川你的刀法是越加厉害了，还是得施展七星连珠箭啊。”红衣少女射箭的同时还笑眯眯说着，显然如此射箭非常轻松。",
+    "type": "role",
+    "bind_role_audio_name": "艾丝妲"
+  },
+  {
+    "role_name": "",
+    "text": "“咻！”",
+    "type": "narration",
+    "bind_role_audio_name": ""
+  },
+  {
+    "role_name": "",
+    "text": "话音刚落，红衣少女新射出的一箭，箭破空带着刺耳的尖啸。",
+    "type": "narration",
+    "bind_role_audio_name": ""
+  },
+  {
+    "role_name": "孟川",
+    "text": "“来了！”孟川也越加郑重。",
+    "type": "role",
+    "bind_role_audio_name": "桑博"
+  },
+  {
+    "role_name": "",
+    "text": "“噗。”“噗。”",
+    "type": "narration",
+    "bind_role_audio_name": ""
+  },
+  {
+    "role_name": "",
+    "text": "孟川刀走弧线，犹如圆球一般阻挡住一根根箭矢。可七星连珠箭是消耗真气极大的杀招，箭矢速度会越来越快。",
+    "type": "narration",
+    "bind_role_audio_name": ""
+  },
+  {
+    "role_name": "",
+    "text": "仅仅第六箭，孟川的刀就阻挡了空，跟着就感觉胸口一疼，整个人情不自禁一个踉跄，胸口怕是要青紫一块了。",
+    "type": "narration",
+    "bind_role_audio_name": ""
+  },
+  {
+    "role_name": "孟川",
+    "text": "“还是没能挡住。”孟川摇头无奈道。",
+    "type": "role",
+    "bind_role_audio_name": "桑博"
+  },
+  {
+    "role_name": "柳七月",
+    "text": "“我修炼成的五大杀招，你已经能挡住四大杀招了，只剩下‘七星连珠箭’罢了。”红衣少女笑道，“已经很厉害了，在道院的时候，洗髓境层次都没谁挡住我的‘三重幻影箭’，可是你却能挡住。”",
+    "type": "role",
+    "bind_role_audio_name": "艾丝妲"
+  },
+  {
+    "role_name": "孟川",
+    "text": "“我从小就挡你的弓箭，当然要比你们道院的强些。”孟川摇头，“你这还是没箭头的，若是加上箭头，箭的速度会更快。你的五大杀招……怕是大半我都挡不住。”",
+    "type": "role",
+    "bind_role_audio_name": "桑博"
+  },
+  {
+    "role_name": "柳七月",
+    "text": "“阿川，难道你没听说？在同一境界，没谁能抗住神箭手的狂攻。”红衣少女得意道。",
+    "type": "role",
+    "bind_role_audio_name": "艾丝妲"
+  },
+  {
+    "role_name": "孟川",
+    "text": "“七月……真生死搏杀，我早就第一时间冲到你面前了。”孟川哼声道。",
+    "type": "role",
+    "bind_role_audio_name": "桑博"
+  },
+  {
+    "role_name": "柳七月",
+    "text": "“神箭手都是有护卫的。”红衣少女撇嘴道，“我护卫会挡住你，然后你就成了我的靶子。说不定将来你就是我的护卫呢！”",
+    "type": "role",
+    "bind_role_audio_name": "艾丝妲"
+  },
+  {
+    "role_name": "",
+    "text": "孟川笑了。",
+    "type": "narration",
+    "bind_role_audio_name": ""
+  },
+  {
+    "role_name": "",
+    "text": "他很清楚神箭手的可怕，在任何一方势力，顶尖神箭手地位都极高，都会被保护的极好。",
+    "type": "narration",
+    "bind_role_audio_name": ""
+  },
+  {
+    "role_name": "",
+    "text": "自己这位七月妹妹，在弓箭上就非常有天赋。",
+    "type": "narration",
+    "bind_role_audio_name": ""
+  },
+  {
+    "role_name": "柳七月",
+    "text": "“阿川，今天你们院长召你们过去，是说玉阳宫斩妖盛会？”柳七月询问道。",
+    "type": "role",
+    "bind_role_audio_name": "艾丝妲"
+  },
+  {
+    "role_name": "孟川",
+    "text": "“嗯，你们烈阳道院也说了吧。”孟川问道。",
+    "type": "role",
+    "bind_role_audio_name": "桑博"
+  },
+  {
+    "role_name": "柳七月",
+    "text": "“说了！我烈阳道院洗髓境十大弟子中就我一个神箭手，院长直接定下一个名额给我。”柳七月说道，“在玉阳宫斩妖盛会对付妖怪，我神箭手是最擅长的。”",
+    "type": "role",
+    "bind_role_audio_name": "艾丝妲"
+  },
+  {
+    "role_name": "孟川",
+    "text": "孟川笑道：“我们镜湖道院洗髓境一共三个名额，我虽然是洗髓境十大弟子之一，但是还得争夺名额，若是得不到名额，都没资格去。”",
+    "type": "role",
+    "bind_role_audio_name": "桑博"
+  },
+  {
+    "role_name": "柳七月",
+    "text": "“那你就慢慢拼吧。”柳七月嘿嘿笑道。",
+    "type": "role",
+    "bind_role_audio_name": "艾丝妲"
+  },
+  {
+    "role_name": "孟川",
+    "text": "“别大意，玉阳宫斩妖盛会上，你面对妖怪，千万别被妖怪给近身了。”孟川说着，“我们先练练。”",
+    "type": "role",
+    "bind_role_audio_name": "桑博"
+  },
+  {
+    "role_name": "",
+    "text": "说着孟川陡然飞扑过去。",
+    "type": "narration",
+    "bind_role_audio_name": ""
+  },
+  {
+    "role_name": "柳七月",
+    "text": "“有本事追上我。”",
+    "type": "role",
+    "bind_role_audio_name": "艾丝妲"
+  },
+  {
+    "role_name": "柳七月",
+    "text": "柳七月立即飞窜闪开，甚至还返身射出一箭。",
+    "type": "role",
+    "bind_role_audio_name": "艾丝妲"
+  },
+  {
+    "role_name": "",
+    "text": "……",
+    "type": "narration",
+    "bind_role_audio_name": ""
+  },
+  {
+    "role_name": "",
+    "text": "另一处，东宁府五大神魔家族之一的‘云家’。",
+    "type": "narration",
+    "bind_role_audio_name": ""
+  },
+  {
+    "role_name": "",
+    "text": "云青萍正在给她父亲‘云符安’泡茶。",
+    "type": "narration",
+    "bind_role_audio_name": ""
+  },
+  {
+    "role_name": "云青萍",
+    "text": "“爹，你尝尝。”云青萍讨好地将一杯茶水放到父亲面前，忽然她瞥见远处回来的侍女绿竹，不由眼睛一亮，连喊道，“绿竹！”",
+    "type": "role",
+    "bind_role_audio_name": "素裳"
+  },
+  {
+    "role_name": "绿竹",
+    "text": "绿竹只能乖乖过去。",
+    "type": "role",
+    "bind_role_audio_name": "三月七"
+  },
+  {
+    "role_name": "云青萍",
+    "text": "“怎么样，孟川怎么说？”云青萍连问道。",
+    "type": "role",
+    "bind_role_audio_name": "黑塔"
+  },
+  {
+    "role_name": "绿竹",
+    "text": "“孟公子说了，说是一个多月后就是玉阳宫斩妖盛会，他要潜心修行以做准备，没法陪小姐你去东山游玩。”绿竹低声道。",
+    "type": "role",
+    "bind_role_audio_name": "素裳"
+  },
+  {
+    "role_name": "云青萍",
+    "text": "“又不去？”",
+    "type": "role",
+    "bind_role_audio_name": "符玄"
+  },
+  {
+    "role_name": "云青萍",
+    "text": "云青萍有些恼怒，“就知道修炼修炼修炼。”",
+    "type": "role",
+    "bind_role_audio_name": "三月七"
+  },
+  {
+    "role_name": "绿竹",
+    "text": "“孟公子还让我告诉小姐，多花点时间修行，别总是想着出去游玩。”绿竹又道。",
+    "type": "role",
+    "bind_role_audio_name": "三月七"
+  },
+  {
+    "role_name": "云青萍",
+    "text": "“他还管我？”",
+    "type": "role",
+    "bind_role_audio_name": "黑塔"
+  },
+  {
+    "role_name": "云青萍",
+    "text": "云青萍越加气恼。",
+    "type": "role",
+    "bind_role_audio_name": "克拉拉"
+  },
+  {
+    "role_name": "云符安",
+    "text": "“我看，孟川说的很对。”坐在那的云符安美滋滋喝茶，说道，“你这丫头就该好好修炼，别老是贪玩。”",
+    "type": "role",
+    "bind_role_audio_name": "桑博"
+  },
+  {
+    "role_name": "云青萍",
+    "text": "“爹，这孟川就跟木头一样。”云青萍看着云符安，忍不住道，“在我刚满月时，你们就给我和孟川定下娃娃亲！可是我俩性子完全不同。我喜欢玩，喜欢请许多好友一起玩。他却喜欢修炼、画画，喜欢安静。我和他说话，也是话不投机。以后想到和他成亲，我都快疯了。”",
+    "type": "role",
+    "bind_role_audio_name": "黑塔"
+  },
+  {
+    "role_name": "云符安",
+    "text": "“你就是太闹腾，刚好有一个能治你的，是好事。”云符安笑道。",
+    "type": "role",
+    "bind_role_audio_name": "丹恒"
+  },
+  {
+    "role_name": "云青萍",
+    "text": "云青萍连到父亲身旁，抱着父亲胳膊撒娇道：“爹，我求求你了，去和孟家说说，找孟伯伯说一说，解除了婚约吧。”",
+    "type": "role",
+    "bind_role_audio_name": "三月七"
+  },
+  {
+    "role_name": "云符安",
+    "text": "“你想都别想！”云符安喝着茶，直接否掉。",
+    "type": "role",
+    "bind_role_audio_name": "丹恒"
+  },
+  {
+    "role_name": "云青萍",
+    "text": "“爹！”",
+    "type": "role",
+    "bind_role_audio_name": "素裳"
+  },
+  {
+    "role_name": "云青萍",
+    "text": "云青萍气道，“你们为什么非要逼我嫁给他？当年，我刚刚满月什么都不懂，就给我定下亲事。你们怎么知道，孟川长大后会是什么样？你们完全不知道，就硬要我嫁给他。你们根本就没在意过我的想法。你不觉得很过分吗？”",
+    "type": "role",
+    "bind_role_audio_name": "三月七"
+  },
+  {
+    "role_name": "云符安",
+    "text": "“孟川还是不错的。”云符安说道，“东宁府五大神魔家族年轻一代，他算是很好了。”",
+    "type": "role",
+    "bind_role_audio_name": "桑博"
+  },
+  {
+    "role_name": "云青萍",
+    "text": "“他再好又怎样，我不喜欢！”云青萍怒道，“我不想嫁给一个说话都说不到一起的所谓天才。”",
+    "type": "role",
+    "bind_role_audio_name": "素裳"
+  },
+  {
+    "role_name": "",
+    "text": "云符安轻轻放下茶杯，眼皮一掀，冷冷看了眼女儿。",
+    "type": "narration",
+    "bind_role_audio_name": ""
+  },
+  {
+    "role_name": "",
+    "text": "云青萍心头一颤。",
+    "type": "narration",
+    "bind_role_audio_name": ""
+  },
+  {
+    "role_name": "",
+    "text": "可心中的傲气让她昂着头，盯着父亲！",
+    "type": "narration",
+    "bind_role_audio_name": ""
+  },
+  {
+    "role_name": "云符安",
+    "text": "“最近半年，你已经和我说过六次解除婚约了。”云符安冰冷道，“看来是爹太宠你了，今天话就和你说清楚。”",
+    "type": "role",
+    "bind_role_audio_name": "丹恒"
+  },
+  {
+    "role_name": "",
+    "text": "云青萍盯着父亲。",
+    "type": "narration",
+    "bind_role_audio_name": ""
+  },
+  {
+    "role_name": "云符安",
+    "text": "云符安继续道：“你和孟川的亲事，不单单是你们俩的事。也是我们云家和孟家的事！我们云家虽是五大神魔家族之一，可定居东宁府也仅仅数十年，族人也仅仅数十位，根基尚浅。而孟家是扎根在东宁上千年的神魔家族，族人过万！孟川父亲‘孟大江’将是下一任孟家族长。你是我们云家第三代唯一的女孩，你和孟川成亲，我们云家和孟家关系自然可以更进一大步。这对我云家也有大大益处。”",
+    "type": "role",
+    "bind_role_audio_name": "桑博"
+  },
+  {
+    "role_name": "云青萍",
+    "text": "“祖父他都修炼成神魔了。”云青萍反驳道，“有祖父在，谁都动摇不了我云家！既然如此，为何不能让我过得更自在些呢？”",
+    "type": "role",
+    "bind_role_audio_name": "符玄"
+  },
+  {
+    "role_name": "云符安",
+    "text": "“自在？自在就是你想要和谁成亲，就和谁成亲？”云符安冷声道。",
+    "type": "role",
+    "bind_role_audio_name": "桑博"
+  },
+  {
+    "role_name": "云青萍",
+    "text": "“怎么，不行么？”云青萍昂头道，“为了家族，就一定牺牲我？爹，你们不觉得羞愧么？”",
+    "type": "role",
+    "bind_role_audio_name": "三月七"
+  },
+  {
+    "role_name": "云符安",
+    "text": "“闭嘴！”",
+    "type": "role",
+    "bind_role_audio_name": "丹恒"
+  },
+  {
+    "role_name": "云符安",
+    "text": "云符安气得站起来，怒指着女儿，喝道，“云青萍，你想要出去游玩，护卫仆从成群。你大冬天想要吃火龙鱼，自有人拼掉命去帮你寻。你修炼不用心，也有大量宝物用在你身上，让你今年也达到了洗髓境。我请高手一对一指点你，你实力弱，我请三名脱胎境护卫一直暗中保护你，请三名脱胎境护卫一月就要五百两银子，还有其他种种宝物赐予……”",
+    "type": "role",
+    "bind_role_audio_name": "丹恒"
+  },
+  {
+    "role_name": "云符安",
+    "text": "“为了你所谓的逍遥自在，你知道家族付出了多少？”云符安盯着女儿。",
+    "type": "role",
+    "bind_role_audio_name": "丹恒"
+  },
+  {
+    "role_name": "",
+    "text": "云青萍愣住了。",
+    "type": "narration",
+    "bind_role_audio_name": ""
+  },
+  {
+    "role_name": "",
+    "text": "她不傻。",
+    "type": "narration",
+    "bind_role_audio_name": ""
+  },
+  {
+    "role_name": "",
+    "text": "她略一算，就知道维持如此生活，家族在她身上付出何等惊人。",
+    "type": "narration",
+    "bind_role_audio_name": ""
+  },
+  {
+    "role_name": "云符安",
+    "text": "“你享受了家族的种种好处，就得承担你该承担的！”云符安怒喝道，“只管享受好处，什么都不做？想得美！”",
+    "type": "role",
+    "bind_role_audio_name": "桑博"
+  },
+  {
+    "role_name": "云符安",
+    "text": "“还有，我知道你们道院的有一个小家伙，叫张冲，最近对你挺殷勤的吧？”云符安冷笑，“他一个张家旁支的小子，也配娶我云符安的女儿，也不照照镜子，看看自己是哪根葱！”",
+    "type": "role",
+    "bind_role_audio_name": "桑博"
+  },
+  {
+    "role_name": "云青萍",
+    "text": "“爹，我和张师兄并没有……”云青萍连要解释。",
+    "type": "role",
+    "bind_role_audio_name": "黑塔"
+  },
+  {
+    "role_name": "云符安",
+    "text": "“只要我发现你们有一丝逾规，污了我云家和孟家的脸面。不但他得死，连你！我都会清理门户！”云符安冷冰冰看着有些吓着的女儿，“到时候别怪当爹的无情。”",
+    "type": "role",
+    "bind_role_audio_name": "丹恒"
+  },
+  {
+    "role_name": "",
+    "text": "云青萍感到心底发寒。",
+    "type": "narration",
+    "bind_role_audio_name": ""
+  },
+  {
+    "role_name": "",
+    "text": "她从来没见过父亲这么冰冷的一面，她今年也才十五岁而已。",
+    "type": "narration",
+    "bind_role_audio_name": ""
+  },
+  {
+    "role_name": "云符安",
+    "text": "“女儿啊。”云符安面色缓下来，“家族联姻就是如此，他就是再丑再无能，你也得嫁。你爹我当初娶你娘，也是你祖父亲自定下，都没得选！而且说起来，孟川人品很不错，你该庆幸了。”",
+    "type": "role",
+    "bind_role_audio_name": "丹恒"
+  },
+  {
+    "role_name": "云符安",
+    "text": "说完，云符安又瞥了眼在女儿身后战战兢兢的侍女绿竹，吩咐一句：“绿竹，给我看好你家小姐，别让她犯了错。”",
+    "type": "role",
+    "bind_role_audio_name": "丹恒"
+  },
+  {
+    "role_name": "绿竹",
+    "text": "“是。”绿竹连忙应道。",
+    "type": "role",
+    "bind_role_audio_name": "符玄"
+  },
+  {
+    "role_name": "",
+    "text": "云符安随即负手离去。",
+    "type": "narration",
+    "bind_role_audio_name": ""
+  },
+  {
+    "role_name": "",
+    "text": "云青萍站在那，愣愣看着父亲离去的身影，想到那句“连你，我都会清理门户。到时候别怪当爹的无情。”，这句话对云青萍刺激的确有些大。",
+    "type": "narration",
+    "bind_role_audio_name": ""
+  },
+  {
+    "role_name": "",
+    "text": "她觉得，这世界和她这么多年想的不一样。",
+    "type": "narration",
+    "bind_role_audio_name": ""
+  },
+  {
+    "role_name": "",
+    "text": "――――――",
+    "type": "narration",
+    "bind_role_audio_name": ""
+  },
+  {
+    "role_name": "",
+    "text": "番茄新书正式开始上传，新的征程开始了~~~还请大家支持！对了，每天两章，更新会在中午11点左右、晚上7点左右。",
+    "type": "narration",
+    "bind_role_audio_name": ""
+  },
+  {
+    "role_name": "",
+    "text": "------------",
+    "type": "narration",
+    "bind_role_audio_name": ""
+  }
+]

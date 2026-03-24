@@ -357,7 +357,6 @@ class DynamicConcurrentProcessorWithParser(DynamicConcurrentProcessor):
 
         while collected < total_expected:
             result = await self.result_queue.get()
-
             # 解析结果
             result = await self.parse_result(result)
             results.append(result)
@@ -440,7 +439,7 @@ async def main():
         "api_key": "sk-cp-p2d06RXci2EZxJavRFpptAWoCT5y6UJCbNRFnrkLRL0-EdwdwogeH3siLguGSazQU0DGG50rIVW-FgFwYVxPqXU0fAzTZEmYHt4fm3NhdKD_wr3KVn5jejo",
         "base_url": "https://api.minimaxi.com/anthropic",
         "model_name": "MiniMax-M2.7",
-        "max_concurrent_requests": 8,
+        "max_concurrent_requests": 10,
     }
 
     # 准备数据：创建 (text, db_id) 的列表
@@ -450,7 +449,7 @@ async def main():
     novel_list = Novel.select().where(
         (Novel.novel_name == "沧元图") &
         (Novel.current_state == 1)
-    ).limit(50)
+    ).limit(30)
 
     with open("./asset/prompt.txt", "r", encoding="utf-8") as file:
         prompt_text = file.read()
@@ -508,11 +507,13 @@ async def main():
                         gender=role.get("gender"),
                         is_bind=False,
                         bind_audio_name="",
-                        chapter_count=role_chapter_max_count + 1
+                        chapter_count=role_chapter_max_count + 1,
+                        presence_rate = role.get("count") / 1
                     )
                     print(f"添加新角色: {role['roleName']}, 章节次数: {temp_role.chapter_count}")
                 else:
                     # 如果角色存在，则更新角色信息
+                    presence_rate = (old_role.role_count + role.get("count"))/(role_chapter_max_count + 1)
                     old_role.role_count = old_role.role_count + role.get("count")
                     old_role.chapter_count = role_chapter_max_count + 1
                     old_role.save()
@@ -521,7 +522,12 @@ async def main():
             # 更新角色章节数最大值
             role_chapter_max.chapter_count = role_chapter_max_count + 1
             role_chapter_max.save()
-
+            #更新角色具体的出场率
+            role_list = Role.select().where(Role.novel_name == novel.novel_name)
+            for new_role in role_list:
+                new_role.chapter_count = role_chapter_max_count + 1
+                new_role.presence_rate = new_role.role_count / (role_chapter_max_count + 1)
+                new_role.save()
             # 保存解析后的章节文本
             novel.after_analysis_data_json = json.dumps(
                 parse_text_json.get("sentenceList"),
