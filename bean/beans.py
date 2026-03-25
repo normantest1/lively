@@ -71,6 +71,22 @@ class RoleAudio(BaseModel):
         table_name = 'role_audios'
         order_by = ('create_time',)
 
-db.create_tables([Novel,Role,NovelName,RoleAudio])
+class ScheduledTask(BaseModel):
+    id = AutoField(primary_key=True)
+    job_id = CharField(max_length=100, unique=True, verbose_name="任务ID")
+    job_type = CharField(max_length=20, verbose_name="任务类型(parse/generate)")
+    cron = CharField(max_length=100, verbose_name="Cron表达式")
+    novel_name = CharField(max_length=100, verbose_name="小说名称")
+    chapter_count = IntegerField(verbose_name="章节数量")
+    thread_count = IntegerField(default=4, verbose_name="线程数量")
+    is_active = BooleanField(default=True, verbose_name="是否启用")
+    create_time = DateTimeField(default=datetime.datetime.now, verbose_name="创建时间")
+    update_time = DateTimeField(default=datetime.datetime.now, verbose_name="更新时间")
+    
+    class Meta:
+        table_name = 'scheduled_tasks'
+        order_by = ('create_time',)
+
+db.create_tables([Novel,Role,NovelName,RoleAudio,ScheduledTask])
 def get_db():
     return db

@@ -10,8 +10,7 @@ from pydantic import Field as PydanticField
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 # TODO 这里是关键注释
-# from nanovllm_voxcpm.models.voxcpm.server import AsyncVoxCPMServerPool
-# from nanovllm_voxcpm import VoxCPM
+
 
 from typing import List, Optional
 from peewee import *
@@ -30,13 +29,7 @@ from scheduler_tasks import (
     get_generate_task_status,
     start_scheduler,
     execute_parse_task,
-    execute_generate_task,
-    set_server_instance,
-    stop_scheduler,
-    get_task_details,
-    get_all_task_details,
-    get_task_logs,
-    clear_task_logs
+    execute_generate_task, stop_scheduler
 )
 
 db = get_db()
@@ -56,7 +49,7 @@ class NovelBase(BaseModel):
     after_analysis_data_json: Optional[str] = PydanticField(None, title="解析后数据", description="大模型解析后的数据")
     novel_name: str = PydanticField(..., max_length=100, title="小说名")
     current_state: int = PydanticField(..., ge=1, le=3, title="当前数据状态",
-                               description="1 已分片待解析，2 已解析待合成，3 已合成语音")
+                                       description="1 已分片待解析，2 已解析待合成，3 已合成语音")
 
 
 class NovelCreate(NovelBase):
@@ -160,7 +153,10 @@ class RoleAudioResponse(RoleAudioBase):
     create_time: datetime.datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
 server = ""
+
 
 # ============ FastAPI 应用 ============
 @asynccontextmanager
@@ -174,24 +170,12 @@ async def lifespan(app: FastAPI):
         print("Database connected")
     else:
         print("Database already connected")
-    # todo 音频模型
-    if server == "":
-        print("加载模型......")
-        # server = AsyncVoxCPMServerPool = VoxCPM.from_pretrained(
-        #     "./VoxCPM1.5/",
-        #     max_num_batched_tokens=8192,
-        #     max_num_seqs=16,
-        #     max_model_len=4096,
-        #     gpu_memory_utilization=0.95,
-        #     enforce_eager=False,
-        #     devices=[0]
-        # )
-    
-    set_server_instance(server)
+
+
     start_scheduler()
-    
+
     yield
-    
+
     # 关闭时执行
     stop_scheduler()
     if not db.is_closed():
@@ -199,7 +183,7 @@ async def lifespan(app: FastAPI):
         db.close()
         print("Database closed")
     print("关闭模型......")
-    # await server.stop()
+
 
 # ============ FastAPI 应用 ============
 app = FastAPI(
@@ -207,6 +191,7 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan  # 使用新的 lifespan 参数
 )
+
 
 # ============ 辅助函数 ============
 def get_novel_or_404(novel_id: int) -> Novel:
@@ -219,6 +204,7 @@ def get_novel_or_404(novel_id: int) -> Novel:
             detail=f"Novel with id {novel_id} not found"
         )
 
+
 def get_role_or_404(role_id: int) -> Role:
     """获取角色，不存在时抛出404"""
     try:
@@ -228,6 +214,7 @@ def get_role_or_404(role_id: int) -> Role:
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Role with id {role_id} not found"
         )
+
 
 def get_novel_name_or_404(novel_name_id: int) -> NovelName:
     """获取小说名，不存在时抛出404"""
@@ -239,6 +226,7 @@ def get_novel_name_or_404(novel_name_id: int) -> NovelName:
             detail=f"NovelName with id {novel_name_id} not found"
         )
 
+
 def get_role_audio_or_404(role_audio_id: int) -> RoleAudio:
     """获取角色音频，不存在时抛出404"""
     try:
@@ -248,6 +236,8 @@ def get_role_audio_or_404(role_audio_id: int) -> RoleAudio:
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"RoleAudio with id {role_audio_id} not found"
         )
+
+
 # ============ Novel CRUD API ============
 
 @app.post("/api/novels", response_model=NovelResponse, status_code=status.HTTP_201_CREATED)
@@ -409,32 +399,26 @@ async def batch_generate_novel(novel_name: str, chapter_count: int):
     # ============ 修改这里开始 ============
     # 在这里添加你的生成逻辑
     # 例如：
+    # TODO 这里是模型设置
 
     try:
         # 1. 查询数据库获取小说信息
-        novels = Novel.select().where(Novel.novel_name == novel_name, Novel.current_state == 2).limit(chapter_count).limit(chapter_count)
+        novels = Novel.select().where(Novel.novel_name == novel_name, Novel.current_state == 2).limit(
+            chapter_count).limit(chapter_count)
         # TODO 记得修改386行和392行的注释
         load_role_list = []
-        # load_role_list = await load_role_audio(novel_name, server)
         for novel in novels:
-            chapter_parse_obj_list = parse_novel_data_bind_role_audio(novel.section_data_json,novel.after_analysis_data_json,novel.novel_name)
+            chapter_parse_obj_list = parse_novel_data_bind_role_audio(novel.section_data_json,
+                                                                      novel.after_analysis_data_json, novel.novel_name)
             # print("*" * 80)
             # print(chapter_parse_obj_list)
             # print("*"*80)
             # await generate_chapter_audio_test(chapter_parse_obj_list, load_role_list, novel_name, server)
-        #     TODO 这里需要修改
-        #     flag = await generate_chapter_audio(chapter_parse_obj_list,load_role_list,novel_name,novel.id,server)
-        #     if flag:
-        #        print(f"小说 {novel.novel_name} 章节 {novel.chapter_names} 生成完成，请去项目目录下的save文件夹下查看")
-        #        novel.current_state = 3
-        #        novel.save()
-        #     else:
-        #         print(f"小说 {novel.novel_name} 章节 {novel.chapter_names} 生成失败，请重试")
+            #     TODO 这里需要修改
     except Exception as e:
         traceback.print_exc()
 
-
-            #
+        #
     # 2. 遍历章节生成音频
     # for i, novel in enumerate(novels[:chapter_count]):
     #     await log_to_frontend(f"正在生成第 {i+1}/{chapter_count} 个章节...")
@@ -1045,8 +1029,10 @@ def refresh_role_audios_batch():
 # ============ WebSocket连接管理 ============
 import asyncio
 
+
 class ConnectionManager:
     """WebSocket连接管理器"""
+
     def __init__(self):
         self.active_connections: List[WebSocket] = []
 
@@ -1071,6 +1057,7 @@ class ConnectionManager:
         # 清理断开的连接
         for conn in disconnected:
             self.disconnect(conn)
+
 
 manager = ConnectionManager()
 
@@ -1161,7 +1148,6 @@ def get_novel_names_list():
     # return {"novel_names": ""}
 
 
-
 # ============ 设置管理 API ============
 import os
 
@@ -1239,7 +1225,8 @@ def save_settings(settings: SettingsRequest):
             detail=f"保存设置失败: {str(e)}"
         )
 
-#============== 定时任务管理API ===============
+
+# ============== 定时任务管理API ===============
 class ScheduledParseJob(BaseModel):
     job_id: str
     cron: str
@@ -1247,11 +1234,13 @@ class ScheduledParseJob(BaseModel):
     chapter_count: int
     thread_count: int
 
+
 class ScheduledGenerateJob(BaseModel):
     job_id: str
     cron: str
     novel_name: str
     chapter_count: int
+
 
 @app.post("/api/scheduled-tasks/parse")
 async def create_scheduled_parse_job(job: ScheduledParseJob):
@@ -1264,7 +1253,7 @@ async def create_scheduled_parse_job(job: ScheduledParseJob):
             chapter_count=job.chapter_count,
             thread_count=job.thread_count
         )
-        
+
         if success:
             return {
                 "message": "定时解析任务创建成功",
@@ -1282,6 +1271,7 @@ async def create_scheduled_parse_job(job: ScheduledParseJob):
             detail=f"创建定时任务失败: {str(e)}"
         )
 
+
 @app.post("/api/scheduled-tasks/generate")
 async def create_scheduled_generate_job(job: ScheduledGenerateJob):
     """创建定时生成音频任务"""
@@ -1292,7 +1282,7 @@ async def create_scheduled_generate_job(job: ScheduledGenerateJob):
             novel_name=job.novel_name,
             chapter_count=job.chapter_count
         )
-        
+
         if success:
             return {
                 "message": "定时生成任务创建成功",
@@ -1310,12 +1300,13 @@ async def create_scheduled_generate_job(job: ScheduledGenerateJob):
             detail=f"创建定时任务失败: {str(e)}"
         )
 
+
 @app.delete("/api/scheduled-tasks/{job_id}")
 async def delete_scheduled_job(job_id: str):
     """删除定时任务"""
     try:
         success = remove_job(job_id)
-        
+
         if success:
             return {
                 "message": "定时任务删除成功",
@@ -1333,6 +1324,7 @@ async def delete_scheduled_job(job_id: str):
             detail=f"删除定时任务失败: {str(e)}"
         )
 
+
 @app.get("/api/scheduled-tasks")
 async def list_scheduled_tasks():
     """获取所有定时任务"""
@@ -1348,6 +1340,7 @@ async def list_scheduled_tasks():
             detail=f"获取定时任务列表失败: {str(e)}"
         )
 
+
 @app.get("/api/scheduled-tasks/status/parse")
 async def get_parse_task_running_status():
     """获取解析任务运行状态"""
@@ -1359,6 +1352,7 @@ async def get_parse_task_running_status():
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"获取任务状态失败: {str(e)}"
         )
+
 
 @app.get("/api/scheduled-tasks/status/generate")
 async def get_generate_task_running_status():
@@ -1372,70 +1366,6 @@ async def get_generate_task_running_status():
             detail=f"获取任务状态失败: {str(e)}"
         )
 
-@app.get("/api/scheduled-tasks/details")
-async def get_scheduled_tasks_details():
-    """获取所有任务的详细信息"""
-    try:
-        details = get_all_task_details()
-        return {
-            "tasks": details,
-            "status": "success"
-        }
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"获取任务详情失败: {str(e)}"
-        )
-
-@app.get("/api/scheduled-tasks/details/{job_id}")
-async def get_scheduled_task_detail(job_id: str):
-    """获取指定任务的详细信息"""
-    try:
-        detail = get_task_details(job_id)
-        if detail is None:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"任务 {job_id} 不存在"
-            )
-        return detail
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"获取任务详情失败: {str(e)}"
-        )
-
-@app.get("/api/scheduled-tasks/logs")
-async def get_scheduled_tasks_logs(limit: int = 100):
-    """获取任务执行日志"""
-    try:
-        logs = get_task_logs(limit)
-        return {
-            "logs": logs,
-            "count": len(logs),
-            "status": "success"
-        }
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"获取日志失败: {str(e)}"
-        )
-
-@app.delete("/api/scheduled-tasks/logs")
-async def clear_scheduled_tasks_logs():
-    """清空任务执行日志"""
-    try:
-        clear_task_logs()
-        return {
-            "message": "日志已清空",
-            "status": "success"
-        }
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"清空日志失败: {str(e)}"
-        )
 
 @app.get("/api/novel/max-chapters")
 async def get_max_chapters(novel_name: str, current_state: int):
@@ -1445,7 +1375,7 @@ async def get_max_chapters(novel_name: str, current_state: int):
             Novel.novel_name == novel_name,
             Novel.current_state == current_state
         ).count()
-        
+
         return {
             "novel_name": novel_name,
             "current_state": current_state,
@@ -1456,9 +1386,11 @@ async def get_max_chapters(novel_name: str, current_state: int):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"获取最大章节数失败: {str(e)}"
         )
-#============== 定时任务管理API结束 ===============
 
-#============== 前端静态页面 =============== #移动这里
+
+# ============== 定时任务管理API结束 ===============
+
+# ============== 前端静态页面 =============== #移动这里
 # 配置 CORS
 app.add_middleware(
     CORSMiddleware,
@@ -1468,38 +1400,42 @@ app.add_middleware(
     allow_headers=["*"],
 )
 # 挂载静态文件目录
-app.mount("/assets", StaticFiles(directory="admin/dist/assets"), name="assets") #移动这里
+app.mount("/assets", StaticFiles(directory="admin/dist/assets"), name="assets")  # 移动这里
 # 挂载音频文件目录（支持 WSL 和 Windows）
-app.mount("/audios", StaticFiles(directory="audios"), name="audios") #移动这里
+app.mount("/audios", StaticFiles(directory="audios"), name="audios")  # 移动这里
+
 
 # 默认首页路由
-@app.get("/") #移动这里
-async def serve_index(): #移动这里
-    return FileResponse("admin/dist/index.html") #移动这里
+@app.get("/")  # 移动这里
+async def serve_index():  # 移动这里
+    return FileResponse("admin/dist/index.html")  # 移动这里
+
 
 # SPA fallback 路由 - 处理 Vue Router 的所有路由
-@app.get("/{path:path}") #移动这里
-async def serve_spa(path: str): #移动这里
-    import os #移动这里
+@app.get("/{path:path}")  # 移动这里
+async def serve_spa(path: str):  # 移动这里
+    import os  # 移动这里
     # 排除 API、assets 和 audios 路由 #移动这里
-    if path.startswith('api/') or path.startswith('assets/') or path.startswith('audios/'): #移动这里
-        raise HTTPException(status_code=404, detail="Not found") #移动这里
+    if path.startswith('api/') or path.startswith('assets/') or path.startswith('audios/'):  # 移动这里
+        raise HTTPException(status_code=404, detail="Not found")  # 移动这里
 
     # 如果是静态文件，直接返回 #移动这里
-    file_path = f"admin/dist/{path}" #移动这里
-    if os.path.exists(file_path) and os.path.isfile(file_path): #移动这里
-        return FileResponse(file_path) #移动这里
+    file_path = f"admin/dist/{path}"  # 移动这里
+    if os.path.exists(file_path) and os.path.isfile(file_path):  # 移动这里
+        return FileResponse(file_path)  # 移动这里
 
     # 对于其他路径，返回 index.html 让 Vue Router 处理 #移动这里
-    return FileResponse("admin/dist/index.html") #移动这里
-#============== 前端静态页面结束 =============== #移动这里
+    return FileResponse("admin/dist/index.html")  # 移动这里
+
+
+# ============== 前端静态页面结束 =============== #移动这里
 
 if __name__ == '__main__':
     import uvicorn
 
     if __name__ == "__main__":
         uvicorn.run(
-            "api:app",
+            "api2:app",
             host="127.0.0.1",
             port=6888,
             reload=True,

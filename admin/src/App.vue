@@ -22,6 +22,9 @@
           <el-menu-item index="/role-audios">
             <span>角色音频管理</span>
           </el-menu-item>
+          <el-menu-item index="/scheduled-tasks">
+            <span>定时任务</span>
+          </el-menu-item>
           <el-menu-item index="/settings">
             <span>系统设置</span>
           </el-menu-item>

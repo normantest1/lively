@@ -4,6 +4,7 @@ import NovelNameManage from '@/views/NovelNameManage.vue'
 import RoleManage from '@/views/RoleManage.vue'
 import RoleAudioManage from '@/views/RoleAudioManage.vue'
 import SettingsView from '@/views/SettingsView.vue'
+import ScheduledTaskView from '@/views/ScheduledTaskView.vue'
 
 const routes = [
   {
@@ -39,6 +40,12 @@ const routes = [
     name: 'SettingsView',
     component: SettingsView,
     meta: { title: '系统设置' }
+  },
+  {
+    path: '/scheduled-tasks',
+    name: 'ScheduledTaskView',
+    component: ScheduledTaskView,
+    meta: { title: '定时任务' }
   }
 ]
 
