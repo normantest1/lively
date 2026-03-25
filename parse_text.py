@@ -141,6 +141,28 @@ class DynamicConcurrentProcessor:
         # 回调函数
         self.on_progress_callback = None
 
+        # 取消标志
+        self._cancel_requested = False
+        self._workers = []
+        self._cancel_event = None
+
+    def set_cancel_event(self, cancel_event):
+        """设置取消事件"""
+        self._cancel_event = cancel_event
+
+    def cancel(self):
+        """请求取消处理"""
+        self._cancel_requested = True
+        log("收到取消请求")
+
+    def is_cancelled(self):
+        """检查是否被取消"""
+        if self._cancel_requested:
+            return True
+        if self._cancel_event and self._cancel_event.is_set():
+            return True
+        return False
+
     async def send_request(self, task_id: int, text: str, db_id: int = None) -> Dict:
         """
         发送单个请求到 Anthropic API
@@ -207,12 +229,23 @@ class DynamicConcurrentProcessor:
     async def worker(self, worker_id: int):
         """
         工作协程
-        从队列中持续获取任务并处理，直到队列为空
+        从队列中持续获取任务并处理，直到队列为空或收到取消信号
         """
         while True:
             try:
+                # 检查是否被取消
+                if self.is_cancelled():
+                    log(f"[Worker-{worker_id}] 检测到取消信号，停止工作")
+                    break
+
                 # 从队列获取任务（阻塞直到有任务）
                 task = await self.task_queue.get()
+
+                # 检查是否被取消（在获取任务后再次检查）
+                if self.is_cancelled():
+                    self.task_queue.task_done()
+                    log(f"[Worker-{worker_id}] 获取任务后检测到取消，停止工作")
+                    break
 
                 # 检查结束信号
                 if task is None:
@@ -261,10 +294,20 @@ class DynamicConcurrentProcessor:
         total_expected = self.stats['total']
 
         while collected < total_expected:
-            result = await self.result_queue.get()
-            results.append(result)
-            collected += 1
-            self.result_queue.task_done()
+            # 检查是否被取消
+            if self.is_cancelled():
+                log(f"结果收集器检测到取消，停止收集 (已收集: {collected}/{total_expected})")
+                break
+
+            try:
+                # 使用超时等待结果，避免永久阻塞
+                result = await asyncio.wait_for(self.result_queue.get(), timeout=0.5)
+                results.append(result)
+                collected += 1
+                self.result_queue.task_done()
+            except asyncio.TimeoutError:
+                # 超时后继续循环检查取消状态
+                continue
 
     async def process(self, texts_with_ids: List[tuple], on_progress: Optional[Callable] = None) -> List[Dict]:
         """
@@ -277,6 +320,9 @@ class DynamicConcurrentProcessor:
         Returns:
             处理结果列表
         """
+        # 重置取消标志
+        self._cancel_requested = False
+
         # 初始化
         self.stats = {
             'total': len(texts_with_ids),
@@ -305,24 +351,64 @@ class DynamicConcurrentProcessor:
             })
 
         # 2. 创建工作池（固定数量的worker）
-        workers = []
+        self._workers = []
         for i in range(self.max_concurrent_requests):
             worker_task = asyncio.create_task(self.worker(i))
-            workers.append(worker_task)
+            self._workers.append(worker_task)
 
         # 3. 收集结果
         results = []
         collector_task = asyncio.create_task(self.result_collector(results))
 
-        # 4. 等待所有任务完成
-        await self.task_queue.join()
+        # 4. 等待所有任务完成或被取消
+        while not self.is_cancelled():
+            # 检查队列是否完成
+            if self.task_queue.empty() and self.stats['completed'] + self.stats['failed'] >= self.stats['total']:
+                break
+            await asyncio.sleep(0.1)
+
+        # 如果被取消，停止处理
+        if self.is_cancelled():
+            log("处理被取消，停止worker...")
+            # 清空剩余任务
+            while not self.task_queue.empty():
+                try:
+                    self.task_queue.get_nowait()
+                    self.task_queue.task_done()
+                except:
+                    break
+
+            # 发送结束信号给所有worker
+            for _ in range(self.max_concurrent_requests):
+                try:
+                    self.task_queue.put_nowait(None)
+                except:
+                    pass
+
+            # 等待所有worker结束
+            for worker in self._workers:
+                if not worker.done():
+                    worker.cancel()
+            await asyncio.gather(*self._workers, return_exceptions=True)
+
+            # 取消collector
+            collector_task.cancel()
+            try:
+                await collector_task
+            except asyncio.CancelledError:
+                pass
+            except Exception:
+                pass
+
+            log(f"处理已停止，已完成: {self.stats['completed']}，失败: {self.stats['failed']}")
+            return results
 
         # 5. 发送结束信号给所有worker
         for _ in range(self.max_concurrent_requests):
             await self.task_queue.put(None)
 
         # 6. 等待所有worker结束
-        await asyncio.gather(*workers)
+        await asyncio.gather(*self._workers)
 
         # 7. 等待结果收集完成
         await collector_task
@@ -337,8 +423,9 @@ class DynamicConcurrentProcessor:
         log(f"成功: {self.stats['completed']}")
         log(f"失败: {self.stats['failed']}")
         log(f"总耗时: {elapsed:.2f} 秒")
-        log(f"平均每个任务: {elapsed / self.stats['total']:.2f} 秒")
-        log(f"吞吐量: {self.stats['total'] / elapsed:.2f} 任务/秒")
+        if self.stats['total'] > 0:
+            log(f"平均每个任务: {elapsed / self.stats['total']:.2f} 秒")
+            log(f"吞吐量: {self.stats['total'] / elapsed:.2f} 任务/秒")
         log(f"{'=' * 60}\n")
 
         return results
@@ -459,15 +546,16 @@ class DynamicConcurrentProcessorWithParser(DynamicConcurrentProcessor):
 
         return results
 
-async def async_parse_text(novel_name=None, chapter_count=None, thread_count=None, log_callback=None):
+async def async_parse_text(novel_name=None, chapter_count=None, thread_count=None, log_callback=None, cancel_event=None):
     """
-    修改后的main函数，支持自定义日志输出
+    修改后的main函数，支持自定义日志输出和取消事件
 
     Args:
         novel_name: 小说名称，如果为None则使用默认值"沧元图"
         chapter_count: 章节数量限制，如果为None则使用默认值30
         thread_count: 线程数，如果为None则使用默认值10
         log_callback: 日志回调函数，接收字符串参数，用于将日志发送到前端
+        cancel_event: 取消事件，用于接收取消信号
     """
     global log_callback_global
     log_callback_global = log_callback
@@ -638,9 +726,65 @@ async def async_parse_text(novel_name=None, chapter_count=None, thread_count=Non
 
     # 创建带解析的处理器
     processor_with_parse = DynamicConcurrentProcessorWithParser(config, parser_func=custom_parser)
+    processor_with_parse.set_cancel_event(cancel_event)
 
-    # 处理文本（传入 (text, db_id) 列表）
-    results_with_parse = await processor_with_parse.process(texts_with_ids)
+    # 创建取消监控任务
+    cancel_monitor_task = None
+    if cancel_event:
+        async def monitor_cancel():
+            while True:
+                if cancel_event.is_set():
+                    log(f"解析任务被取消（检测到取消信号）")
+                    if log_callback_global:
+                        await log_callback_global("解析任务被取消\n")
+                    # 取消日志任务
+                    log_task.cancel()
+                    try:
+                        await log_task
+                    except asyncio.CancelledError:
+                        pass
+                    except Exception:
+                        pass
+                    # 取消处理器任务（这会触发process中的取消逻辑）
+                    processor_with_parse.cancel()
+                    return
+                await asyncio.sleep(0.1)  # 每0.1秒检查一次
+
+        cancel_monitor_task = asyncio.create_task(monitor_cancel())
+
+    try:
+        # 检查是否被取消
+        if cancel_event and cancel_event.is_set():
+            log(f"解析任务被取消（检测到取消信号）")
+            if log_callback_global:
+                await log_callback_global("解析任务被取消\n")
+            return
+
+        # 处理文本（传入 (text, db_id) 列表）
+        try:
+            results_with_parse = await processor_with_parse.process(texts_with_ids)
+        except asyncio.CancelledError:
+            log(f"解析任务被取消（处理器中断）")
+            if log_callback_global:
+                await log_callback_global("解析任务被取消\n")
+            raise
+
+        # 处理完成后再次检查是否被取消
+        if cancel_event and cancel_event.is_set():
+            log(f"解析任务在执行后被取消")
+            if log_callback_global:
+                await log_callback_global("解析任务被取消\n")
+            return
+    finally:
+        # 取消监控任务
+        if cancel_monitor_task:
+            cancel_monitor_task.cancel()
+            try:
+                await cancel_monitor_task
+            except asyncio.CancelledError:
+                pass
+            except Exception:
+                pass
 
     # 查看结果
     for result in results_with_parse:

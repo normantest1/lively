@@ -151,5 +151,47 @@ export default {
   },
   saveSettings(data) {
     return apiClient.post('/settings', data).then(res => res.data)
+  },
+
+  // Scheduled Tasks APIs
+  getScheduledTasks() {
+    return apiClient.get('/scheduled-tasks').then(res => res.data)
+  },
+  createScheduledParseTask(data) {
+    return apiClient.post('/scheduled-tasks/parse', data).then(res => res.data)
+  },
+  createScheduledGenerateTask(data) {
+    return apiClient.post('/scheduled-tasks/generate', data).then(res => res.data)
+  },
+  deleteScheduledTask(jobId) {
+    return apiClient.delete(`/scheduled-tasks/${jobId}`).then(res => res.data)
+  },
+  getParseTaskStatus() {
+    return apiClient.get('/scheduled-tasks/status/parse').then(res => res.data)
+  },
+  getGenerateTaskStatus() {
+    return apiClient.get('/scheduled-tasks/status/generate').then(res => res.data)
+  },
+  getScheduledTasksDetails() {
+    return apiClient.get('/scheduled-tasks/details').then(res => res.data)
+  },
+  getScheduledTaskDetail(jobId) {
+    return apiClient.get(`/scheduled-tasks/details/${jobId}`).then(res => res.data)
+  },
+  getScheduledTasksLogs(limit = 100) {
+    return apiClient.get('/scheduled-tasks/logs', {
+      params: { limit }
+    }).then(res => res.data)
+  },
+  clearScheduledTasksLogs() {
+    return apiClient.delete('/scheduled-tasks/logs').then(res => res.data)
+  },
+  getMaxChapters(novelName, currentState) {
+    return apiClient.get('/novel/max-chapters', {
+      params: {
+        novel_name: novelName,
+        current_state: currentState
+      }
+    }).then(res => res.data)
   }
 }

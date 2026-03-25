@@ -10,8 +10,8 @@ from pydantic import Field as PydanticField
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 # TODO 这里是关键注释
-from nanovllm_voxcpm.models.voxcpm.server import AsyncVoxCPMServerPool
-from nanovllm_voxcpm import VoxCPM
+# from nanovllm_voxcpm.models.voxcpm.server import AsyncVoxCPMServerPool
+# from nanovllm_voxcpm import VoxCPM
 
 from typing import List, Optional
 from peewee import *
@@ -21,6 +21,23 @@ import json
 from generate_audio import update_audio_role, load_role_audio, generate_chapter_audio
 from parse_text import async_parse_text, parse_novel_data_bind_role_audio
 from utils.common import split_novel_text_by_content_list
+from scheduler_tasks import (
+    add_parse_job,
+    add_generate_job,
+    remove_job,
+    get_all_jobs,
+    get_parse_task_status,
+    get_generate_task_status,
+    start_scheduler,
+    execute_parse_task,
+    execute_generate_task,
+    set_server_instance,
+    stop_scheduler,
+    get_task_details,
+    get_all_task_details,
+    get_task_logs,
+    clear_task_logs
+)
 
 db = get_db()
 
@@ -157,28 +174,32 @@ async def lifespan(app: FastAPI):
         print("Database connected")
     else:
         print("Database already connected")
-
+    # todo 音频模型
     if server == "":
         print("加载模型......")
-        server = AsyncVoxCPMServerPool = VoxCPM.from_pretrained(
-            "./VoxCPM1.5/",
-            max_num_batched_tokens=8192,
-            max_num_seqs=16,
-            max_model_len=4096,
-            gpu_memory_utilization=0.95,
-            enforce_eager=False,
-            devices=[0]
-        )
-
+        # server = AsyncVoxCPMServerPool = VoxCPM.from_pretrained(
+        #     "./VoxCPM1.5/",
+        #     max_num_batched_tokens=8192,
+        #     max_num_seqs=16,
+        #     max_model_len=4096,
+        #     gpu_memory_utilization=0.95,
+        #     enforce_eager=False,
+        #     devices=[0]
+        # )
+    
+    set_server_instance(server)
+    start_scheduler()
+    
     yield
-
+    
     # 关闭时执行
+    stop_scheduler()
     if not db.is_closed():
         print("Shutting down, closing database...")
         db.close()
         print("Database closed")
     print("关闭模型......")
-    await server.stop()
+    # await server.stop()
 
 # ============ FastAPI 应用 ============
 app = FastAPI(
@@ -388,14 +409,13 @@ async def batch_generate_novel(novel_name: str, chapter_count: int):
     # ============ 修改这里开始 ============
     # 在这里添加你的生成逻辑
     # 例如：
-    # TODO 这里是模型设置
 
     try:
         # 1. 查询数据库获取小说信息
         novels = Novel.select().where(Novel.novel_name == novel_name, Novel.current_state == 2).limit(chapter_count).limit(chapter_count)
         # TODO 记得修改386行和392行的注释
         load_role_list = []
-        load_role_list = await load_role_audio(novel_name, server)
+        # load_role_list = await load_role_audio(novel_name, server)
         for novel in novels:
             chapter_parse_obj_list = parse_novel_data_bind_role_audio(novel.section_data_json,novel.after_analysis_data_json,novel.novel_name)
             # print("*" * 80)
@@ -403,17 +423,15 @@ async def batch_generate_novel(novel_name: str, chapter_count: int):
             # print("*"*80)
             # await generate_chapter_audio_test(chapter_parse_obj_list, load_role_list, novel_name, server)
         #     TODO 这里需要修改
-            flag = await generate_chapter_audio(chapter_parse_obj_list,load_role_list,novel_name,novel.id,server)
-            if flag:
-               print(f"小说 {novel.novel_name} 章节 {novel.chapter_names} 生成完成，请去项目目录下的save文件夹下查看")
-               novel.current_state = 3
-               novel.save()
-            else:
-                print(f"小说 {novel.novel_name} 章节 {novel.chapter_names} 生成失败，请重试")
-        await server.stop()
+        #     flag = await generate_chapter_audio(chapter_parse_obj_list,load_role_list,novel_name,novel.id,server)
+        #     if flag:
+        #        print(f"小说 {novel.novel_name} 章节 {novel.chapter_names} 生成完成，请去项目目录下的save文件夹下查看")
+        #        novel.current_state = 3
+        #        novel.save()
+        #     else:
+        #         print(f"小说 {novel.novel_name} 章节 {novel.chapter_names} 生成失败，请重试")
     except Exception as e:
         traceback.print_exc()
-        await server.stop()
 
 
             #
@@ -1220,6 +1238,226 @@ def save_settings(settings: SettingsRequest):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"保存设置失败: {str(e)}"
         )
+
+#============== 定时任务管理API ===============
+class ScheduledParseJob(BaseModel):
+    job_id: str
+    cron: str
+    novel_name: str
+    chapter_count: int
+    thread_count: int
+
+class ScheduledGenerateJob(BaseModel):
+    job_id: str
+    cron: str
+    novel_name: str
+    chapter_count: int
+
+@app.post("/api/scheduled-tasks/parse")
+async def create_scheduled_parse_job(job: ScheduledParseJob):
+    """创建定时解析任务"""
+    try:
+        success = add_parse_job(
+            job_id=job.job_id,
+            cron=job.cron,
+            novel_name=job.novel_name,
+            chapter_count=job.chapter_count,
+            thread_count=job.thread_count
+        )
+        
+        if success:
+            return {
+                "message": "定时解析任务创建成功",
+                "job_id": job.job_id,
+                "status": "success"
+            }
+        else:
+            return {
+                "message": "定时解析任务创建失败",
+                "status": "failed"
+            }
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"创建定时任务失败: {str(e)}"
+        )
+
+@app.post("/api/scheduled-tasks/generate")
+async def create_scheduled_generate_job(job: ScheduledGenerateJob):
+    """创建定时生成音频任务"""
+    try:
+        success = add_generate_job(
+            job_id=job.job_id,
+            cron=job.cron,
+            novel_name=job.novel_name,
+            chapter_count=job.chapter_count
+        )
+        
+        if success:
+            return {
+                "message": "定时生成任务创建成功",
+                "job_id": job.job_id,
+                "status": "success"
+            }
+        else:
+            return {
+                "message": "定时生成任务创建失败",
+                "status": "failed"
+            }
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"创建定时任务失败: {str(e)}"
+        )
+
+@app.delete("/api/scheduled-tasks/{job_id}")
+async def delete_scheduled_job(job_id: str):
+    """删除定时任务"""
+    try:
+        success = remove_job(job_id)
+        
+        if success:
+            return {
+                "message": "定时任务删除成功",
+                "job_id": job_id,
+                "status": "success"
+            }
+        else:
+            return {
+                "message": "定时任务删除失败",
+                "status": "failed"
+            }
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"删除定时任务失败: {str(e)}"
+        )
+
+@app.get("/api/scheduled-tasks")
+async def list_scheduled_tasks():
+    """获取所有定时任务"""
+    try:
+        jobs = get_all_jobs()
+        return {
+            "jobs": jobs,
+            "status": "success"
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"获取定时任务列表失败: {str(e)}"
+        )
+
+@app.get("/api/scheduled-tasks/status/parse")
+async def get_parse_task_running_status():
+    """获取解析任务运行状态"""
+    try:
+        status = get_parse_task_status()
+        return status
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"获取任务状态失败: {str(e)}"
+        )
+
+@app.get("/api/scheduled-tasks/status/generate")
+async def get_generate_task_running_status():
+    """获取生成任务运行状态"""
+    try:
+        status = get_generate_task_status()
+        return status
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"获取任务状态失败: {str(e)}"
+        )
+
+@app.get("/api/scheduled-tasks/details")
+async def get_scheduled_tasks_details():
+    """获取所有任务的详细信息"""
+    try:
+        details = get_all_task_details()
+        return {
+            "tasks": details,
+            "status": "success"
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"获取任务详情失败: {str(e)}"
+        )
+
+@app.get("/api/scheduled-tasks/details/{job_id}")
+async def get_scheduled_task_detail(job_id: str):
+    """获取指定任务的详细信息"""
+    try:
+        detail = get_task_details(job_id)
+        if detail is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"任务 {job_id} 不存在"
+            )
+        return detail
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"获取任务详情失败: {str(e)}"
+        )
+
+@app.get("/api/scheduled-tasks/logs")
+async def get_scheduled_tasks_logs(limit: int = 100):
+    """获取任务执行日志"""
+    try:
+        logs = get_task_logs(limit)
+        return {
+            "logs": logs,
+            "count": len(logs),
+            "status": "success"
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"获取日志失败: {str(e)}"
+        )
+
+@app.delete("/api/scheduled-tasks/logs")
+async def clear_scheduled_tasks_logs():
+    """清空任务执行日志"""
+    try:
+        clear_task_logs()
+        return {
+            "message": "日志已清空",
+            "status": "success"
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"清空日志失败: {str(e)}"
+        )
+
+@app.get("/api/novel/max-chapters")
+async def get_max_chapters(novel_name: str, current_state: int):
+    """获取指定小说在指定状态下的最大章节数"""
+    try:
+        count = Novel.select().where(
+            Novel.novel_name == novel_name,
+            Novel.current_state == current_state
+        ).count()
+        
+        return {
+            "novel_name": novel_name,
+            "current_state": current_state,
+            "max_chapters": count
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"获取最大章节数失败: {str(e)}"
+        )
+#============== 定时任务管理API结束 ===============
+
 #============== 前端静态页面 =============== #移动这里
 # 配置 CORS
 app.add_middleware(
