@@ -38,6 +38,9 @@ export default {
   deleteNovelByName(novelName) {
     return apiClient.delete(`/novels/by-name/${encodeURIComponent(novelName)}`).then(res => res.data)
   },
+  batchUpdateNovelsState(data) {
+    return apiClient.post('/novels/batch-update-state', data).then(res => res.data)
+  },
   uploadNovelsBatch(files) {
     const formData = new FormData()
     files.forEach(file => {

@@ -6,6 +6,9 @@
           <span>小说管理</span>
           <div>
             <el-button type="primary" @click="handleCreate">添加小说</el-button>
+            <el-button type="info" @click="handleBatchUpdateState" :disabled="selectedRows.length === 0">
+              批量修改状态 ({{ selectedRows.length }})
+            </el-button>
             <el-button type="danger" @click="handleDeleteNovelData">删除小说相关数据</el-button>
             <el-upload
               ref="uploadRef"
@@ -48,7 +51,8 @@
         </el-form-item>
       </el-form>
 
-      <el-table :data="tableData" v-loading="loading" stripe>
+      <el-table :data="tableData" v-loading="loading" stripe @selection-change="handleSelectionChange">
+        <el-table-column type="selection" width="55" />
         <el-table-column prop="id" label="ID" width="80" />
         <el-table-column prop="novel_name" label="小说名" min-width="150" />
         <el-table-column prop="chapter_names" label="章节名" min-width="200" show-overflow-tooltip />
@@ -265,6 +269,79 @@
       </template>
     </el-dialog>
 
+    <!-- 批量修改状态对话框 -->
+    <el-dialog
+      v-model="batchStateDialogVisible"
+      title="批量修改小说状态"
+      width="600px"
+    >
+      <el-form :model="batchStateForm" label-width="140px">
+        <el-form-item label="当前状态">
+          <el-tag :type="getStateType(batchStateForm.current_state)" size="large">
+            {{ getStateName(batchStateForm.current_state) }}
+          </el-tag>
+        </el-form-item>
+        <el-form-item label="修改为" required>
+          <el-select
+            v-model="batchStateForm.new_state"
+            placeholder="请选择新状态"
+            style="width: 100%"
+          >
+            <el-option
+              v-for="state in availableStates"
+              :key="state.value"
+              :label="state.label"
+              :value="state.value"
+              :disabled="state.value === 1"
+            />
+          </el-select>
+        </el-form-item>
+        <el-alert
+          v-if="batchStateForm.new_state === 1"
+          title="降级操作警告"
+          type="warning"
+          :closable="false"
+          show-icon
+          style="margin-top: 20px;"
+        >
+          <template #default>
+            <div style="font-size: 14px; line-height: 1.6;">
+              <p><strong>降级操作说明：</strong></p>
+              <ul style="margin: 10px 0; padding-left: 20px;">
+                <li>选中的 {{ selectedRows.length }} 条小说数据的 <code>after_analysis_data_json</code> 字段将置为空</li>
+                <li>roles 表中对应小说名的角色数据的 <code>chapter_count</code> 将减少 {{ selectedRows.length }}</li>
+              </ul>
+            </div>
+          </template>
+        </el-alert>
+        <el-alert
+          v-if="batchStateForm.new_state === 3"
+          title="升级操作说明"
+          type="success"
+          :closable="false"
+          show-icon
+          style="margin-top: 20px;"
+        >
+          <template #default>
+            <div style="font-size: 14px; line-height: 1.6;">
+              <p>选中的 {{ selectedRows.length }} 条小说数据将直接升级为"已合成语音"状态。</p>
+            </div>
+          </template>
+        </el-alert>
+      </el-form>
+      <template #footer>
+        <el-button @click="batchStateDialogVisible = false">取消</el-button>
+        <el-button
+          type="primary"
+          @click="handleConfirmBatchUpdate"
+          :disabled="!batchStateForm.new_state"
+          :loading="batchStateLoading"
+        >
+          确认修改
+        </el-button>
+      </template>
+    </el-dialog>
+
     <!-- 删除小说相关数据对话框 -->
     <el-dialog
       v-model="deleteDialogVisible"
@@ -342,6 +419,18 @@ const novelNamesList = ref([])
 const showLogArea = ref(false)
 const logContent = ref('')
 let websocket = null
+
+const selectedRows = ref([])
+const batchStateDialogVisible = ref(false)
+const batchStateLoading = ref(false)
+const batchStateForm = reactive({
+  current_state: null,
+  new_state: null
+})
+const availableStates = ref([
+  { value: 2, label: '已解析待合成' },
+  { value: 3, label: '已合成语音' }
+])
 
 const deleteDialogVisible = ref(false)
 const deleteLoading = ref(false)
@@ -462,6 +551,66 @@ const handleSizeChange = (size) => {
 const handlePageChange = (page) => {
   pagination.page = page
   loadData()
+}
+
+const handleSelectionChange = (selection) => {
+  selectedRows.value = selection
+}
+
+const handleBatchUpdateState = () => {
+  if (selectedRows.value.length === 0) {
+    ElMessage.warning('请先选择要修改的小说')
+    return
+  }
+
+  // 检查所有选中小说的状态是否相同
+  const states = [...new Set(selectedRows.value.map(row => row.current_state))]
+
+  // 如果状态不相同，不允许修改
+  if (states.length !== 1) {
+    ElMessage.warning('所选小说的状态不同，无法批量修改，请选择状态相同的小说')
+    return
+  }
+
+  // 如果状态是1，不允许修改
+  if (states[0] === 1) {
+    ElMessage.warning('状态为"已分片待解析"的小说不允许修改状态')
+    return
+  }
+
+  batchStateForm.current_state = states[0]
+  batchStateForm.new_state = null
+  batchStateDialogVisible.value = true
+}
+
+const handleConfirmBatchUpdate = async () => {
+  if (!batchStateForm.new_state) {
+    ElMessage.warning('请选择要修改的状态')
+    return
+  }
+
+  try {
+    batchStateLoading.value = true
+
+    const novelIds = selectedRows.value.map(row => row.id)
+
+    await api.batchUpdateNovelsState({
+      novel_ids: novelIds,
+      new_state: batchStateForm.new_state
+    })
+
+    ElMessage.success(`成功修改 ${novelIds.length} 条小说数据的状态`)
+    batchStateDialogVisible.value = false
+    selectedRows.value = []
+
+    // 刷新数据
+    await loadData()
+  } catch (error) {
+    console.error('批量修改状态失败:', error)
+    ElMessage.error('批量修改状态失败: ' + (error.message || '未知错误'))
+  } finally {
+    batchStateLoading.value = false
+  }
 }
 
 const handleCreate = () => {
