@@ -1,3 +1,4 @@
+
 import os
 from pathlib import Path
 from struct import pack_into
@@ -10,6 +11,7 @@ import soundfile as sf
 
 from bean.beans import RoleAudio, Role
 from utils.config import load_config
+from logger import log, log_error
 config_path = Path(__file__).resolve().parent / "config/lively_config.json"
 ROOT_DIR = Path(__file__).resolve().parent
 
@@ -147,6 +149,8 @@ def remove_silence_from_audio(
         }
 
     except Exception as e:
+        log_error(f"remove_silence_from_audio 处理音频时出错 (input_path={input_path}, output_path={output_path}): {str(e)}")
+        traceback.print_exc()
         return {
             "success": False,
             "original_duration": 0,
@@ -196,6 +200,7 @@ def batch_remove_silence(
         output_file = os.path.join(output_dir, filename)
 
         print(f"正在处理: {filename}")
+        log(f"正在处理: {filename}")
         result = remove_silence_from_audio(
             input_path=input_file,
             output_path=output_file,
@@ -210,8 +215,10 @@ def batch_remove_silence(
 
         if result["success"]:
             print(f"  ✓ 成功: {result['message']}")
+            log(f"  ✓ 成功: {result['message']}")
         else:
             print(f"  ✗ 失败: {result['message']}")
+            log(f"  ✗ 失败: {result['message']}")
 
     return results
 
@@ -235,6 +242,7 @@ def merge_wav_files_without_resampling(file_list, output_file, target_sr):
 
     for i, wav_file in enumerate(file_list):
         print(f"处理文件 {i + 1}/{len(file_list)}: {os.path.basename(wav_file)}")
+        log(f"处理文件 {i + 1}/{len(file_list)}: {os.path.basename(wav_file)}")
 
         # 读取WAV文件
         audio, sr = sf.read(wav_file)
@@ -242,6 +250,7 @@ def merge_wav_files_without_resampling(file_list, output_file, target_sr):
         # 检查采样率
         if sr != target_sr:
             print(f"  ⚠️ 警告: 采样率不匹配 (文件: {sr}Hz, 目标: {target_sr}Hz) - 跳过此文件")
+            log(f"  ⚠️ 警告: 采样率不匹配 (文件: {sr}Hz, 目标: {target_sr}Hz) - 跳过此文件")
             skipped_files.append((wav_file, sr))
             continue
 
@@ -249,30 +258,38 @@ def merge_wav_files_without_resampling(file_list, output_file, target_sr):
         if len(audio.shape) > 1:
             audio = np.mean(audio, axis=1)
             print(f"  - 立体声转换为单声道")
+            log(f"  - 立体声转换为单声道")
 
         audio_segments.append(audio)
         print(f"  ✓ 已添加，长度: {len(audio)} 样本")
+        log(f"  ✓ 已添加，长度: {len(audio)} 样本")
 
     if not audio_segments:
         print("错误：没有有效的音频文件可以合并")
+        log("错误：没有有效的音频文件可以合并")
         return None, None
 
     # 合并所有音频段
     print(f"\n正在合并 {len(audio_segments)} 个音频段...")
+    log(f"\n正在合并 {len(audio_segments)} 个音频段...")
     merged_audio = np.concatenate(audio_segments)
 
     # 计算总时长
     total_duration = len(merged_audio) / target_sr
     print(f"合并完成！总时长: {total_duration:.2f}秒")
+    log(f"合并完成！总时长: {total_duration:.2f}秒")
 
     # 保存合并后的文件
     sf.write(output_file, merged_audio, target_sr)
     print(f"文件已保存: {output_file}")
+    log(f"文件已保存: {output_file}")
 
     if skipped_files:
         print(f"\n跳过的文件 ({len(skipped_files)}个):")
+        log(f"\n跳过的文件 ({len(skipped_files)}个):")
         for f, sr in skipped_files:
             print(f"  - {os.path.basename(f)} (采样率: {sr}Hz)")
+            log(f"  - {os.path.basename(f)} (采样率: {sr}Hz)")
     for file in file_list:
         os.remove(file)
     result = remove_silence_from_audio(
@@ -283,12 +300,19 @@ def merge_wav_files_without_resampling(file_list, output_file, target_sr):
         keep_short_silence=500  # 短停顿保留500ms
     )
     print("\n静音处理结果:")
+    log("\n静音处理结果:")
     print(f"  原始时长: {result['original_duration']:.2f} 秒")
+    log(f"  原始时长: {result['original_duration']:.2f} 秒")
     print(f"  处理后时长: {result['processed_duration']:.2f} 秒")
+    log(f"  处理后时长: {result['processed_duration']:.2f} 秒")
     print(f"  删除静音: {result['removed_duration']:.2f} 秒")
+    log(f"  删除静音: {result['removed_duration']:.2f} 秒")
     print(f"  删除段数: {result['removed_count']}")
+    log(f"  删除段数: {result['removed_count']}")
     print(f"  状态: {'成功' if result['success'] else '失败'}")
+    log(f"  状态: {'成功' if result['success'] else '失败'}")
     print(f"  信息: {result['message']}")
+    log(f"  信息: {result['message']}")
     return merged_audio, target_sr
 
 async def load_role_audio(novel_name,server):
@@ -298,38 +322,44 @@ async def load_role_audio(novel_name,server):
     :param server: nanollm_voxcpe的模型对象
     :return:
     """
-    # 加载配置信息
-    load_role_count = load_config(config_path,"preload_role_count")
-    #查询当前解析的最大章节数
-    role_chapter_max = Role.select().where(
-        Role.novel_name == novel_name
-    ).order_by(Role.create_time.asc()).first()
-    #将常用的几个角色信息加载出来
-    text_role_lsit = Role.select().order_by(
-        -(
-            Role.role_count / role_chapter_max.chapter_count
-        )
-    ).limit(load_role_count)
-    audio_role_name_list = []
-    for role in text_role_lsit:
-        if role.bind_audio_name != "":
-            audio_role_name_list.append(role.bind_audio_name)
-    audio_role_list = RoleAudio.select().where(RoleAudio.role_name.in_(audio_role_name_list))
-    load_role_list = []
-    for audio_role in audio_role_list:
-        with open(audio_role.audio_path, "rb") as f:
-            wav_bytes = f.read()
-        prompt_id = await server.add_prompt(
-            wav=wav_bytes,
-            wav_format="wav",  # 指定格式
-            prompt_text=audio_role.audio_text
-        )
-        tmep_role = {
-            "audio_role_name": audio_role.role_name,
-            "prompt_id": prompt_id
-        }
-        load_role_list.append(tmep_role)
-    return load_role_list
+    try:
+        # 加载配置信息
+        load_role_count = load_config(config_path,"preload_role_count")
+        #查询当前解析的最大章节数
+        role_chapter_max = Role.select().where(
+            Role.novel_name == novel_name
+        ).order_by(Role.create_time.asc()).first()
+        #将常用的几个角色信息加载出来
+        text_role_lsit = Role.select().order_by(
+            -(
+                Role.role_count / role_chapter_max.chapter_count
+            )
+        ).limit(load_role_count)
+        audio_role_name_list = []
+        for role in text_role_lsit:
+            if role.bind_audio_name != "":
+                audio_role_name_list.append(role.bind_audio_name)
+        audio_role_list = RoleAudio.select().where(RoleAudio.role_name.in_(audio_role_name_list))
+        load_role_list = []
+        for audio_role in audio_role_list:
+            with open(audio_role.audio_path, "rb") as f:
+                wav_bytes = f.read()
+            prompt_id = await server.add_prompt(
+                wav=wav_bytes,
+                wav_format="wav",  # 指定格式
+                prompt_text=audio_role.audio_text
+            )
+            tmep_role = {
+                "audio_role_name": audio_role.role_name,
+                "prompt_id": prompt_id
+            }
+            load_role_list.append(tmep_role)
+        return load_role_list
+    except Exception as e:
+        log_error(f"load_role_audio 加载角色音频失败 (novel_name={novel_name}): {str(e)}")
+        traceback.print_exc()
+        return []
+
 def get_folders(path):
     """
     根据传入的路径，生成路径下的文件夹列表
@@ -344,26 +374,30 @@ def update_audio_role():
     加载./audios文件夹下的角色音频信息到数据库
     :return:
     """
-    folder_path = './audios'
-    role_name_list = get_folders(folder_path)
-    for role_name in role_name_list:
-        with open(f"{folder_path}/{role_name}/gender.txt", "r",encoding="utf-8") as f:
-            role_gender = f.read()
-        with open(f"{folder_path}/{role_name}/text.txt", "r",encoding="utf-8") as f:
-            audio_text = f.read()
-        audio_path = ROOT_DIR / f"audios/{role_name}/audio.wav"
-        audio_uri = f"{role_name}/audio.wav"
-        old_role = Role.get_or_none(Role.role_name == role_name)
-        # 如果角色不存在，则添加角色
-        if old_role is None:
-            RoleAudio.create(
-                role_name=role_name,
-                gender=role_gender,
-                audio_text=audio_text,
-                audio_path=audio_path,
-                citation_count = 0,
-                audio_uri=audio_uri
-            )
+    try:
+        folder_path = './audios'
+        role_name_list = get_folders(folder_path)
+        for role_name in role_name_list:
+            with open(f"{folder_path}/{role_name}/gender.txt", "r",encoding="utf-8") as f:
+                role_gender = f.read()
+            with open(f"{folder_path}/{role_name}/text.txt", "r",encoding="utf-8") as f:
+                audio_text = f.read()
+            audio_path = ROOT_DIR / f"audios/{role_name}/audio.wav"
+            audio_uri = f"{role_name}/audio.wav"
+            old_role = Role.get_or_none(Role.role_name == role_name)
+            # 如果角色不存在，则添加角色
+            if old_role is None:
+                RoleAudio.create(
+                    role_name=role_name,
+                    gender=role_gender,
+                    audio_text=audio_text,
+                    audio_path=audio_path,
+                    citation_count = 0,
+                    audio_uri=audio_uri
+                )
+    except Exception as e:
+        log_error(f"update_audio_role 更新角色音频信息失败: {str(e)}")
+        traceback.print_exc()
 
 
 
@@ -392,6 +426,8 @@ async def generate_chapter_audio(chapter_role_list,role_audio_id,novel_name,nove
             wav_format="wav",  # 指定格式
             prompt_text=narration_role_audio.audio_text
         )
+        log(f"给 {novel_name} 的 {narration_role.role_name} 分配 {narration_role_audio.role_name}")
+        print(f"给 {novel_name} 的 {narration_role.role_name} 分配 {narration_role_audio.role_name}")
         model_info = await server.get_model_info()
         sample_rate = int(model_info["sample_rate"])
         chapter_name = "-".join(chapter_role_list[0].get('text').strip().split())
@@ -401,11 +437,15 @@ async def generate_chapter_audio(chapter_role_list,role_audio_id,novel_name,nove
         generate_chapter_audio_duration = 0
         generate_chapter_audio_time = 0
         for (index,chapter_role) in enumerate(chapter_role_list):
+            # print(chapter_role_list)
+            # break
             start_time = time.time()
             wav_duration = 0
             role_prompt_id = ""
             temp_save_wav_file_path = temp_path / f"{chapter_name}-{index}.wav"
-            chapter_text = chapter_role.get("text").replace("……", "").replace("-", "").replace(".", "")
+            chapter_text = chapter_role.get("text").replace("…","").replace("·","").replace("(","").replace(")","").replace("[","").replace("]","").replace("{","").replace("}","").replace("<","").replace(">","").replace("-","").replace("_","").replace("@","").replace("#","").replace("*","").replace("\\","").replace("|","").replace("~","").replace("`","").replace(".","").replace("　","")
+            if chapter_text == "":
+                continue
             buf = []
             #生成旁白声音
             if chapter_role.get("type") == "narration":
@@ -464,14 +504,21 @@ async def generate_chapter_audio(chapter_role_list,role_audio_id,novel_name,nove
                 generate_chapter_audio_duration += wav_duration
             end_time = time.time() -start_time
             generate_chapter_audio_time += end_time
+            print(f"给 {novel_name} 的 {chapter_role.get("role_name")} 分配 {chapter_role.get("bind_role_audio_name")}")
+            log(f"给 {novel_name} 的 {chapter_role.get("role_name")} 分配 {chapter_role.get("bind_role_audio_name")}")
             print(f"小说文本：{chapter_text}")
+            log(f"小说文本：{chapter_text}")
             print(f"生成音频的时长：{str(wav_duration)}，用时：{str(end_time)}，RTF：{str( end_time / wav_duration)}，当前进度：{str(index+1)}/{str(len(chapter_role_list))}")
+            log(f"生成音频的时长：{str(wav_duration)}，用时：{str(end_time)}，RTF：{str( end_time / wav_duration)}，当前进度：{str(index+1)}/{str(len(chapter_role_list))}")
         # 根据分片列表合并wav文件
         merge_wav_files_without_resampling(wav_file_path_list,save_chapter_file_path,sample_rate)
         print(f"生成章节的时长：{str(generate_chapter_audio_duration)}，总用时：{str(generate_chapter_audio_time)}，RTF：{str(generate_chapter_audio_time / generate_chapter_audio_duration)}")
+        log(f"生成章节的时长：{str(generate_chapter_audio_duration)}，总用时：{str(generate_chapter_audio_time)}，RTF：{str(generate_chapter_audio_time / generate_chapter_audio_duration)}")
         print("*"*88)
+        log("*"*88)
         return True
     except Exception as e:
+        log_error(f"generate_chapter_audio 生成章节音频失败 (novel_name={novel_name}, novel_id={novel_id}): {str(e)}")
         traceback.print_exc()
         return False
 
@@ -489,14 +536,17 @@ async def generate_chapter_audio_test(chapter_role_list,role_audio_id,novel_name
             (Role.role_name == "旁白")
         ).get_or_none()
         print(f"获取旁白声音成功生成旁白声音成功：{narration_role.role_name}-绑定的声音：{narration_role.bind_audio_name}")
+        log(f"获取旁白声音成功生成旁白声音成功：{narration_role.role_name}-绑定的声音：{narration_role.bind_audio_name}")
         narration_role_audio = RoleAudio.select().where(
             RoleAudio.role_name == narration_role.bind_audio_name
         ).get_or_none()
         print("获取旁白角色音频成功")
+        log("获取旁白角色音频成功")
         with open(narration_role_audio.audio_path, "rb") as f:
             narration_wav_bytes = f.read()
 
         print("读取角色音频文件成功")
+        log("读取角色音频文件成功")
         # narration_prompt_id = await server.add_prompt(
         #     wav=narration_wav_bytes,
         #     wav_format="wav",  # 指定格式
@@ -523,6 +573,7 @@ async def generate_chapter_audio_test(chapter_role_list,role_audio_id,novel_name
                 # sf.write(save_wav_file_path, wav, sample_rate)
                 wav_file_path_list.append(save_wav_file_path)
                 print(f"这时旁白的声音：{chapter_role.get('text')}")
+                log(f"这时旁白的声音：{chapter_role.get('text')}")
                 continue
             #生成角色声音
             elif chapter_role.get("type") == "role":
@@ -547,6 +598,7 @@ async def generate_chapter_audio_test(chapter_role_list,role_audio_id,novel_name
                     with open(role_audio_data.audio_path, "rb") as f:
                         role_wav_bytes = f.read()
                     print(f"该句的类型是角色：{chapter_role.get('text')}")
+                    log(f"该句的类型是角色：{chapter_role.get('text')}")
                     # role_prompt_id = await server.add_prompt(
                     #     wav=role_wav_bytes,
                     #     wav_format="wav",  # 指定格式
@@ -567,10 +619,14 @@ async def generate_chapter_audio_test(chapter_role_list,role_audio_id,novel_name
         # 根据分片列表合并wav文件
         # merge_wav_files_without_resampling(wav_file_path_list,save_wav_file_path /f"{novel_name}.wav",sample_rate)
         print("句子判断完毕")
+        log("句子判断完毕")
         print(wav_file_path_list)
+        log(str(wav_file_path_list))
         print("*"*80)
+        log("*"*80)
         return True
     except Exception as e:
+        log_error(f"generate_chapter_audio_test 生成章节音频测试失败 (novel_name={novel_name}): {str(e)}")
         traceback.print_exc()
         return False
 if __name__ == '__main__':

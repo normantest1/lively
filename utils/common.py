@@ -1,3 +1,4 @@
+
 import json
 import re
 import traceback
@@ -55,6 +56,7 @@ def split_novel_text(novel_path):
 
     import utils.config as config
     from bean.beans import Novel, NovelName, Role
+    from logger import log as logger_log
 
     try:
         get_db().begin()
@@ -94,8 +96,11 @@ def split_novel_text(novel_path):
                         chapter_text_list.append(chapter_name)
                     else:
                         print("小说章节名列表：")
+                        logger_log("小说章节名列表：")
                         print(chapter_names_list)
+                        logger_log(str(chapter_names_list))
                         print("小说章节名："+chapter_names)
+                        logger_log("小说章节名："+chapter_names)
                         Novel.create(
                             section_data_json=json.dumps(max_section_text_obj_list,ensure_ascii=False),
                             after_analysis_data_json="",
@@ -132,6 +137,7 @@ def split_novel_text(novel_path):
         db.commit()
     except Exception as e:
         print(e)
+        logger_log(str(e))
         traceback.print_exc()
         db.rollback()
 
@@ -139,8 +145,10 @@ def split_novel_text(novel_path):
 
 def model_parse(prompt):
     print(prompt)
+    logger_log(prompt)
 
     import utils.config as config
+    from logger import log as logger_log
 
     client = anthropic.Anthropic(
         api_key=config.load_config(config_path,"api_key"),
@@ -171,6 +179,7 @@ def parse_novel_text():
     :return:
     """
     from bean.beans import Novel, NovelName, Role
+    from logger import log as logger_log
 
     novel_name = NovelName.select().limit(1).get()
     novel_list = Novel.select().where(
@@ -193,6 +202,7 @@ def parse_novel_text():
             ).order_by(Role.create_time.asc()).limit(1).get_or_none()
             role_chapter_max_count = role_chapter_max.chapter_count
             print("查询到的最大章节次数："+str(role_chapter_max_count))
+            logger_log("查询到的最大章节次数："+str(role_chapter_max_count))
             for role in parse_text_json["roleList"]:
                 old_role = Role.get_or_none(
                     (Role.role_name == role["roleName"]) &
@@ -210,14 +220,19 @@ def parse_novel_text():
                         chapter_count=role_chapter_max_count + 1
                     )
                     print("添加的角色的章节次数："+str(temp_role.chapter_count))
+                    logger_log("添加的角色的章节次数："+str(temp_role.chapter_count))
                     print(temp_role.__data__)
+                    logger_log(str(temp_role.__data__))
                 else:
                     old_role.role_count = old_role.role_count + role["count"]
                     old_role.chapter_count = role_chapter_max.chapter_count + 1
                     old_role.save()
                     print("保存的角色的章节次数："+str(old_role.chapter_count))
+                    logger_log("保存的角色的章节次数："+str(old_role.chapter_count))
                     print(old_role.__data__)
+                    logger_log(str(old_role.__data__))
             print("-----------------------------")
+            logger_log("-----------------------------")
             role_chapter_max.chapter_count = role_chapter_max.chapter_count + 1
             role_chapter_max.save()
 
@@ -247,6 +262,7 @@ def split_novel_text2(novel_path):
 
     import utils.config as config
     from bean.beans import Novel, NovelName, Role
+    from logger import log as logger_log
 
     for (index,line) in enumerate(input_novel_text_list):
         if re.match(section_re, line):
@@ -307,6 +323,7 @@ def split_novel_text2(novel_path):
                 temp_max_section_text_list.extend(chapter_text)
                 if i == len(chapter_text_array) - 1:
                     print("到达最后一章节")
+                    logger_log("到达最后一章节")
                     max_section_text_obj_list = array_to_obj_list(0, temp_max_section_text_list)
                     Novel.create(
                         section_data_json=json.dumps(max_section_text_obj_list, ensure_ascii=False),
@@ -348,6 +365,7 @@ def split_novel_text_by_content_list(novel_content_list,novel_name):
 
     import utils.config as config
     from bean.beans import Novel, NovelName, Role
+    from logger import log as logger_log
 
     for (index, line) in enumerate(input_novel_text_list):
         if re.match(section_re, line):
@@ -407,6 +425,7 @@ def split_novel_text_by_content_list(novel_content_list,novel_name):
                 temp_max_section_text_list.extend(chapter_text)
                 if i == len(chapter_text_array) - 1:
                     print("到达最后一章节")
+                    logger_log("到达最后一章节")
                     max_section_text_obj_list = array_to_obj_list(0, temp_max_section_text_list)
                     Novel.create(
                         section_data_json=json.dumps(max_section_text_obj_list, ensure_ascii=False),
@@ -439,4 +458,3 @@ if __name__ == '__main__':
     # split_novel_text2(novel_path)
 
     # parse_novel_text()
-

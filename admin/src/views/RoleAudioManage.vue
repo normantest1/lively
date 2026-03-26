@@ -7,6 +7,13 @@
           <div>
             <el-button type="primary" @click="handleCreate">添加音频</el-button>
             <el-button type="warning" @click="handleRefreshBatch">批量刷新后端角色</el-button>
+            <el-button
+              type="danger"
+              @click="handleBatchDelete"
+              :disabled="selectedRows.length === 0"
+            >
+              批量删除 ({{ selectedRows.length }})
+            </el-button>
           </div>
         </div>
       </template>
@@ -35,8 +42,8 @@
         </el-form-item>
       </el-form>
 
-      <el-table :data="tableData" v-loading="loading" stripe>
-        <el-table-column prop="id" label="ID" width="80" />
+      <el-table :data="tableData" v-loading="loading" stripe @selection-change="handleSelectionChange">
+        <el-table-column type="selection" width="55" />
         <el-table-column prop="role_name" label="音频角色名" min-width="120" />
         <el-table-column label="音频播放" width="100">
           <template #default="{ row }">
@@ -145,6 +152,7 @@ const formRef = ref(null)
 const audioRef = ref(null)
 const currentPlayingId = ref(null)
 const currentAudio = ref(null)
+const selectedRows = ref([])
 
 const queryForm = reactive({
   role_name: '',
@@ -291,6 +299,44 @@ const handleReset = () => {
   queryForm.gender = ''
   queryForm.min_citation_count = null
   handleQuery()
+}
+
+const handleSelectionChange = (selection) => {
+  selectedRows.value = selection
+}
+
+const handleBatchDelete = async () => {
+  if (selectedRows.value.length === 0) {
+    ElMessage.warning('请先选择要删除的音频')
+    return
+  }
+
+  try {
+    await ElMessageBox.confirm(
+      `确定要删除选中的 ${selectedRows.value.length} 个音频吗?`,
+      '提示',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }
+    )
+
+    loading.value = true
+    const deletePromises = selectedRows.value.map(row => api.deleteRoleAudio(row.id))
+    await Promise.all(deletePromises)
+
+    ElMessage.success(`成功删除 ${selectedRows.value.length} 个音频`)
+    selectedRows.value = []
+    loadData()
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('批量删除失败:', error)
+      ElMessage.error('批量删除失败')
+    }
+  } finally {
+    loading.value = false
+  }
 }
 
 const handleSizeChange = (size) => {

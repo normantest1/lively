@@ -1,3 +1,4 @@
+
 import os
 from pathlib import Path
 
@@ -5,6 +6,7 @@ from peewee import fn
 
 from bean.beans import RoleAudio, Role
 from utils.config import load_config
+from logger import log as logger_log, log_error
 config_path = Path(__file__).resolve().parent / "config/lively_config.json"
 ROOT_DIR = Path(__file__).resolve().parent
 
@@ -29,6 +31,7 @@ log_callback_global = None
 def log(message):
     """日志输出函数，同时打印和发送到队列"""
     print(message)
+    logger_log(message)
     log_queue.put(message)
 
 async def process_log_queue_task():
@@ -43,6 +46,8 @@ async def process_log_queue_task():
                 await asyncio.sleep(0.1)
         except Exception as e:
             print(f"日志处理错误: {e}")
+            logger_log(f"日志处理错误: {e}")
+            log_error(f"process_log_queue_task 日志处理错误: {str(e)}")
 
 # ============ 配置管理 ============
 class Config:
@@ -57,8 +62,12 @@ class Config:
 
     def load_from_file(self, config_path: str):
         """从文件加载配置"""
-        with open(config_path, 'r', encoding='utf-8') as f:
-            self.config_data = json.load(f)
+        try:
+            with open(config_path, 'r', encoding='utf-8') as f:
+                self.config_data = json.load(f)
+        except Exception as e:
+            log_error(f"Config.load_from_file 加载配置文件失败 (config_path={config_path}): {str(e)}")
+            traceback.print_exc()
 
     def get(self, key: str, default=None):
         """获取配置项"""
@@ -217,6 +226,7 @@ class DynamicConcurrentProcessor:
             }
 
         except Exception as e:
+            log_error(f"send_request 发送请求失败 (task_id={task_id}, db_id={db_id}): {str(e)}")
             traceback.print_exc()
             return {
                 'task_id': task_id,
@@ -285,6 +295,7 @@ class DynamicConcurrentProcessor:
 
             except Exception as e:
                 log(f"[Worker-{worker_id}] 异常: {e}")
+                log_error(f"worker-{worker_id} Worker异常 (worker_id={worker_id}): {str(e)}")
                 traceback.print_exc()
                 self.task_queue.task_done()
 
@@ -397,7 +408,8 @@ class DynamicConcurrentProcessor:
                 await collector_task
             except asyncio.CancelledError:
                 pass
-            except Exception:
+            except Exception as e:
+                log_error(f"process 取消collector时出错: {str(e)}")
                 pass
 
             log(f"处理已停止，已完成: {self.stats['completed']}，失败: {self.stats['failed']}")
@@ -464,6 +476,7 @@ class DynamicConcurrentProcessorWithParser(DynamicConcurrentProcessor):
                 result['parsed'] = parsed
             except Exception as e:
                 result['parse_error'] = str(e)
+                log_error(f"parse_result 解析结果失败 (task_id={result.get('task_id')}, db_id={result.get('db_id')}): {str(e)}")
                 traceback.print_exc()
         return result
 
@@ -708,6 +721,7 @@ async def async_parse_text(novel_name=None, chapter_count=None, thread_count=Non
             get_db().commit()
         except Exception as e:
             log(f"处理章节 {db_id} 时出错: {e}")
+            log_error(f"custom_parser 处理章节失败 (db_id={db_id}): {str(e)}")
             get_db().rollback()
             traceback.print_exc()
             return {
@@ -743,7 +757,8 @@ async def async_parse_text(novel_name=None, chapter_count=None, thread_count=Non
                         await log_task
                     except asyncio.CancelledError:
                         pass
-                    except Exception:
+                    except Exception as e:
+                        log_error(f"monitor_cancel 取消日志任务时出错: {str(e)}")
                         pass
                     # 取消处理器任务（这会触发process中的取消逻辑）
                     processor_with_parse.cancel()
@@ -765,6 +780,7 @@ async def async_parse_text(novel_name=None, chapter_count=None, thread_count=Non
             results_with_parse = await processor_with_parse.process(texts_with_ids)
         except asyncio.CancelledError:
             log(f"解析任务被取消（处理器中断）")
+            log_error(f"async_parse_text 解析任务被取消 (asyncio.CancelledError)")
             if log_callback_global:
                 await log_callback_global("解析任务被取消\n")
             raise
@@ -775,6 +791,10 @@ async def async_parse_text(novel_name=None, chapter_count=None, thread_count=Non
             if log_callback_global:
                 await log_callback_global("解析任务被取消\n")
             return
+    except Exception as e:
+        log_error(f"async_parse_text 解析过程中出错 (novel_name={novel_name}, chapter_count={chapter_count}): {str(e)}")
+        traceback.print_exc()
+        raise
     finally:
         # 取消监控任务
         if cancel_monitor_task:
@@ -783,7 +803,8 @@ async def async_parse_text(novel_name=None, chapter_count=None, thread_count=Non
                 await cancel_monitor_task
             except asyncio.CancelledError:
                 pass
-            except Exception:
+            except Exception as e:
+                log_error(f"async_parse_text 取消监控任务时出错: {str(e)}")
                 pass
 
     # 查看结果
@@ -817,85 +838,96 @@ def parse_novel_data_bind_role_audio(text_json,parse_text_json,novel_name):
     :param parse_text_json: 解析后的章节数据
     :return:
     """
-    text_json_list = json.loads(text_json)
-    parse_text_json_list = json.loads(parse_text_json)
-    #小说对应数据的列表
-    novel_data_list = []
-    #查询绑定了角色音频的小说角色
-    has_bind_audio_role_name_list = Role.select(Role.bind_audio_name).where(
-        (Role.novel_name == novel_name)&
-        (Role.bind_audio_name != '')
-    )
-    has_bind_audio_role_names = []
-    for role in has_bind_audio_role_name_list:
-        # print(role.bind_audio_name)
-        has_bind_audio_role_names.append(role.bind_audio_name)
-    #为对应的句子绑定角色音频和类型数据
-    for i in range(0,len(text_json_list)):
-        for parse_text_json in parse_text_json_list:
-            #如果句子跟解析文本对应上
-            if i == parse_text_json.get("number"):
-                role_name = parse_text_json.get("roleName")
-                gender = parse_text_json.get("gender")
-                _type = parse_text_json.get("identity")
-                if gender != "男":
-                    gender = "女"
-                bind_audio_name = ""
-                if _type == "role":
-                    # print(f"类型：{_type}，角色名：{role_name}，章节名：{text_json_list[0]['0']}")
-                    role = Role.get_or_none(
-                        (Role.role_name == role_name) &
-                        (Role.novel_name == novel_name)
-                    )
-                    # 如果大模型解析语句出现类型为ROLE，但role_name等于空的情况
-                    if role is None:
-                        role = Role(
-                            role_name="BUG角色",
-                            novel_name=novel_name,
-                            gender=gender,
-                            type=_type,
-                            bind_audio_name="",
-                            role_count = 0,
-                            is_bind = False,
-                            chapter_count = 0,
-                            presence_rate = 0
-                        )
-                    #小说角色没有绑定角色音频
-                    if role.bind_audio_name == "":
-                        #查找没有绑定过和符合性别的音频角色
-                        not_bind_role_audio_list = RoleAudio.select().where(RoleAudio.role_name.not_in(has_bind_audio_role_names))
-                        # print(has_bind_audio_role_names)
-                        # print(gender)
-                        # print(role.role_name)
-                        not_bind_role_audio_list = not_bind_role_audio_list.where(RoleAudio.gender == gender)
-                        random_role_audio = not_bind_role_audio_list.order_by(fn.Random()).limit(1)
-                        # print(random_role_audio)
-                        random_role_audio = random_role_audio.get_or_none()
-                        # print("*"*80)
-                        #如果还有角色未被绑定
-                        if random_role_audio:
-                            role.bind_audio_name = random_role_audio.role_name
-                            bind_audio_name = random_role_audio.role_name
-                        else:
-                            #角色已经被绑定完了，从音频库里面随机选一个
-                            temp_audio_role = RoleAudio.select().where(RoleAudio.gender == gender).order_by(fn.Random()).limit(1).get_or_none()
-                            role.bind_audio_name = temp_audio_role.role_name
-                            bind_audio_name = temp_audio_role.role_name
-                        #为出场率大于0.3的角色绑定音频
-                        if role.role_name != "BUG角色" and role.presence_rate > 0.4:
-                            role.bind_audio_name = bind_audio_name
-                            role.is_bind = True
-                            role.save()
-                    elif role.bind_audio_name != "":
-                        bind_audio_name = role.bind_audio_name
+    try:
+        text_json_list = json.loads(text_json)
+        parse_text_json_list = json.loads(parse_text_json)
+        #小说对应数据的列表
+        novel_data_list = []
+        #查询绑定了角色音频的小说角色
+        has_bind_audio_role_name_list = Role.select(Role.bind_audio_name).where(
+            (Role.novel_name == novel_name)&
+            (Role.bind_audio_name != '')
+        )
+        has_bind_audio_role_names = []
+        for role in has_bind_audio_role_name_list:
+            # print(role.bind_audio_name)
+            has_bind_audio_role_names.append(role.bind_audio_name)
+        #为对应的句子绑定角色音频和类型数据
+        for i in range(0,len(text_json_list)):
+            for parse_text_json in parse_text_json_list:
+                #如果句子跟解析文本对应上
+                if i == parse_text_json.get("number"):
+                    role_name = parse_text_json.get("roleName")
+                    gender = parse_text_json.get("gender")
+                    _type = parse_text_json.get("identity")
+                    if gender != "男":
+                        gender = "女"
+                    bind_audio_name = ""
 
-                #如果小说角色绑定了角色音频
-                temp_obj = {
-                    "role_name": role_name,
-                    "text": text_json_list[i].get(str(i)),
-                    "type": _type,
-                    "bind_role_audio_name": bind_audio_name
-                }
-                novel_data_list.append(temp_obj)
-                break
-    return novel_data_list
+                    if _type == "role":
+                        # print(f"类型：{_type}，角色名：{role_name}，章节名：{text_json_list[0]['0']}")
+                        role = Role.get_or_none(
+                            (Role.role_name == role_name) &
+                            (Role.novel_name == novel_name)
+                        )
+                        # 如果大模型解析语句出现类型为ROLE，但role_name等于空的情况
+                        if role is None:
+                            role = Role(
+                                role_name="BUG角色",
+                                novel_name=novel_name,
+                                gender=gender,
+                                type=_type,
+                                bind_audio_name="",
+                                role_count = 0,
+                                is_bind = False,
+                                chapter_count = 0,
+                                presence_rate = 0
+                            )
+                        #小说角色没有绑定角色音频
+                        if role.bind_audio_name == "":
+                            #查找没有绑定过和符合性别的音频角色
+                            not_bind_role_audio_list = RoleAudio.select().where(RoleAudio.role_name.not_in(has_bind_audio_role_names))
+                            print(has_bind_audio_role_names)
+                            # print(gender)
+                            # print(role.role_name)
+                            print(f"角色名：{role.role_name}，性别：{gender}，没有绑定音频角色，开始为他分配")
+                            not_bind_role_audio_list = not_bind_role_audio_list.where(RoleAudio.gender == gender)
+                            random_role_audio = not_bind_role_audio_list.order_by(fn.Random()).limit(1)
+                            # print(random_role_audio)
+                            random_role_audio = random_role_audio.get_or_none()
+                            # print("*"*80)
+                            #如果还有角色未被绑定
+                            if random_role_audio:
+                                role.bind_audio_name = random_role_audio.role_name
+                                bind_audio_name = random_role_audio.role_name
+                                print(f"找到未被分配的音频角色，音频角色：{random_role_audio.role_name}")
+                            else:
+                                #角色已经被绑定完了，从音频库里面随机选一个
+                                temp_audio_role = RoleAudio.select().where(RoleAudio.gender == gender).order_by(fn.Random()).limit(1).get_or_none()
+                                role.bind_audio_name = temp_audio_role.role_name
+                                bind_audio_name = temp_audio_role.role_name
+                                print(f"所有音频角色已被分配完毕，正在随机分配已有的音频角色：{temp_audio_role.role_name}")
+
+                            #为出场率大于0.3的角色绑定音频
+                            if role.role_name != "BUG角色" and role.presence_rate > 0.32:
+                                role.bind_audio_name = bind_audio_name
+                                role.is_bind = True
+                                log(f"角色 {role.role_name} 的出场率为 {str(role.presence_rate)} ,大于33%，为他/她绑定音频角色：{bind_audio_name}")
+                                print(f"角色 {role.role_name} 的出场率为 {str(role.presence_rate)} ,大于33%，为他/她绑定音频角色：{bind_audio_name}")
+                                role.save()
+                        elif role.bind_audio_name != "":
+                            bind_audio_name = role.bind_audio_name
+                    #如果小说角色绑定了角色音频
+                    temp_obj = {
+                        "role_name": role_name,
+                        "text": text_json_list[i].get(str(i)),
+                        "type": _type,
+                        "bind_role_audio_name": bind_audio_name
+                    }
+                    novel_data_list.append(temp_obj)
+                    break
+        return novel_data_list
+    except Exception as e:
+        log_error(f"parse_novel_data_bind_role_audio 绑定角色音频失败 (novel_name={novel_name}): {str(e)}")
+        traceback.print_exc()
+        return []

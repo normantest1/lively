@@ -1,3 +1,4 @@
+import sys
 import traceback
 import datetime
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -6,6 +7,7 @@ from apscheduler.jobstores.memory import MemoryJobStore
 from bean.beans import Novel, ScheduledTask, get_db
 from parse_text import async_parse_text, parse_novel_data_bind_role_audio
 from generate_audio import load_role_audio, generate_chapter_audio
+from logger import log as logger_log, log_error as logger_log_error
 import asyncio
 
 scheduler = AsyncIOScheduler(
@@ -38,20 +40,41 @@ def log_info(message: str):
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     log_line = f"[{timestamp}] [INFO] {message}"
     print(log_line)
+    logger_log(log_line)
     _add_to_logs(log_line)
 
-def log_error(message: str):
-    """统一的错误日志"""
+def log_error(message: str = None):
+    """统一的错误日志，包含完整的堆栈跟踪"""
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    log_line = f"[{timestamp}] [ERROR] {message}"
-    print(log_line)
-    _add_to_logs(log_line)
+
+    if message:
+        log_line = f"[{timestamp}] [ERROR] {message}"
+        print(log_line)
+        logger_log(log_line)
+        _add_to_logs(log_line)
+
+    # 获取完整的错误堆栈信息
+    exc_type, exc_value, exc_traceback = sys.exc_info()
+    if exc_type is not None:
+        error_msg = f"[{timestamp}] [ERROR] 完整错误堆栈:\n"
+        print(error_msg)
+        logger_log(error_msg)
+        _add_to_logs(error_msg)
+
+        # 将完整的堆栈跟踪写入日志
+        import sys as _sys
+        tb_lines = traceback.format_exception(exc_type, exc_value, exc_traceback)
+        for line in tb_lines:
+            print(line, end='')
+            logger_log(line.rstrip())
+            _add_to_logs(line.rstrip())
 
 def log_success(message: str):
     """统一的成功日志"""
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     log_line = f"[{timestamp}] [SUCCESS] {message}"
     print(log_line)
+    logger_log(log_line)
     _add_to_logs(log_line)
 
 def log_warning(message: str):
@@ -59,6 +82,7 @@ def log_warning(message: str):
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     log_line = f"[{timestamp}] [WARNING] {message}"
     print(log_line)
+    logger_log(log_line)
     _add_to_logs(log_line)
 
 def _add_to_logs(message: str):
@@ -135,8 +159,14 @@ def parse_cron(cron: str):
         second = parse_cron_field(parts[0])
         minute = parse_cron_field(parts[1])
         hour = parse_cron_field(parts[2])
+        # 处理日字段，确保值在1-31之间
         day = parse_cron_field(parts[3])
+        if day == '0':
+            day = '*'
+        # 处理月字段，确保值在1-12之间
         month = parse_cron_field(parts[4])
+        if month == '0':
+            month = '*'
         day_of_week = parse_cron_field(parts[5])
         year = parse_cron_field(parts[6])
         return second, minute, hour, day, month, day_of_week, year
@@ -185,7 +215,7 @@ def create_cron_trigger(second, minute, hour, day, month, day_of_week, year):
 async def execute_parse_task(job_id: str, novel_name: str, chapter_count: int, thread_count: int, log_callback=None):
     """执行批量解析任务"""
     global parse_task_running, parse_current_job_id, parse_cancel_event
-    
+
     log_info(f"="*80)
     log_info(f"定时解析任务触发")
     log_info(f"任务ID: {job_id}")
@@ -193,67 +223,67 @@ async def execute_parse_task(job_id: str, novel_name: str, chapter_count: int, t
     log_info(f"章节数: {chapter_count}")
     log_info(f"线程数: {thread_count}")
     log_info(f"="*80)
-    
+
     if log_callback:
         await log_callback(f"[定时任务] 定时解析任务触发\n")
         await log_callback(f"[定时任务] 任务ID: {job_id}\n")
         await log_callback(f"[定时任务] 小说名: {novel_name}\n")
         await log_callback(f"[定时任务] 章节数: {chapter_count}\n")
         await log_callback(f"[定时任务] 线程数: {thread_count}\n")
-    
+
     if parse_task_running:
         log_warning(f"发现正在执行的解析任务: {parse_current_job_id}，新任务 {job_id} 将替代旧任务")
         if log_callback:
             await log_callback(f"[警告] 发现正在执行的解析任务: {parse_current_job_id}，新任务将替代旧任务\n")
-        
+
         if parse_cancel_event:
             parse_cancel_event.set()
             log_info(f"已发送取消信号到任务: {parse_current_job_id}")
             if log_callback:
                 await log_callback(f"[警告] 已发送取消信号到任务: {parse_current_job_id}\n")
-        
+
         await asyncio.sleep(0.5)
-    
+
     parse_task_running = True
     parse_current_job_id = job_id
     parse_cancel_event = asyncio.Event()
     current_cancel_event = parse_cancel_event
-    
+
     try:
         log_info(f"开始执行批量解析任务...")
         if log_callback:
             await log_callback(f"[定时任务] 开始执行批量解析任务\n")
-        
+
         if current_cancel_event.is_set():
             log_warning(f"任务 {job_id} 被取消（检测到取消信号）")
             if log_callback:
                 await log_callback(f"[定时任务] 任务被取消\n")
             return False
-        
+
         log_info(f"正在查询待解析的小说章节 (current_state=1)...")
         db = get_db()
         novels_to_parse = Novel.select().where(
-            Novel.novel_name == novel_name, 
+            Novel.novel_name == novel_name,
             Novel.current_state == 1
         ).limit(chapter_count)
-        
+
         novel_list = list(novels_to_parse)
         total_count = len(novel_list)
         log_info(f"找到 {total_count} 个待解析的章节")
-        
+
         if log_callback:
             await log_callback(f"[定时任务] 找到 {total_count} 个待解析的章节\n")
-        
+
         if total_count == 0:
             log_warning(f"没有找到待解析的章节，任务结束")
             if log_callback:
                 await log_callback(f"[定时任务] 没有找到待解析的章节\n")
             return True
-        
+
         log_info(f"开始解析任务，共 {total_count} 个章节")
         if log_callback:
             await log_callback(f"[定时任务] 开始解析任务，共 {total_count} 个章节\n")
-        
+
         await async_parse_text(
             novel_name=novel_name,
             chapter_count=chapter_count,
@@ -261,17 +291,17 @@ async def execute_parse_task(job_id: str, novel_name: str, chapter_count: int, t
             log_callback=log_callback,
             cancel_event=current_cancel_event
         )
-        
+
         if current_cancel_event.is_set():
             log_warning(f"任务 {job_id} 在执行后被取消")
             if log_callback:
                 await log_callback(f"[定时任务] 任务被取消\n")
             return False
-        
+
         log_success(f"批量解析任务执行完成！共处理 {total_count} 个章节")
         if log_callback:
             await log_callback(f"[定时任务] 批量解析任务执行完成\n")
-        
+
         return True
     except asyncio.CancelledError:
         log_warning(f"解析任务被取消: {job_id}")
@@ -280,7 +310,6 @@ async def execute_parse_task(job_id: str, novel_name: str, chapter_count: int, t
         raise
     except Exception as e:
         log_error(f"批量解析任务执行失败: {e}")
-        traceback.print_exc()
         if log_callback:
             await log_callback(f"[定时任务] 批量解析任务执行失败: {e}\n")
         return False
@@ -294,113 +323,113 @@ async def execute_parse_task(job_id: str, novel_name: str, chapter_count: int, t
 async def execute_generate_task(job_id: str, novel_name: str, chapter_count: int, log_callback=None):
     """执行批量生成音频任务"""
     global generate_task_running, generate_current_job_id, generate_cancel_event, server_instance
-    
+
     log_info(f"="*80)
     log_info(f"定时生成音频任务触发")
     log_info(f"任务ID: {job_id}")
     log_info(f"小说名: {novel_name}")
     log_info(f"章节数: {chapter_count}")
     log_info(f"="*80)
-    
+
     if log_callback:
         await log_callback(f"[定时任务] 定时生成音频任务触发\n")
         await log_callback(f"[定时任务] 任务ID: {job_id}\n")
         await log_callback(f"[定时任务] 小说名: {novel_name}\n")
         await log_callback(f"[定时任务] 章节数: {chapter_count}\n")
-    
+
     if generate_task_running:
         log_warning(f"发现正在执行的生成任务: {generate_current_job_id}，新任务 {job_id} 将替代旧任务")
         if log_callback:
             await log_callback(f"[警告] 发现正在执行的生成任务: {generate_current_job_id}，新任务将替代旧任务\n")
-        
+
         if generate_cancel_event:
             generate_cancel_event.set()
             log_info(f"已发送取消信号到任务: {generate_current_job_id}")
             if log_callback:
                 await log_callback(f"[警告] 已发送取消信号到任务: {generate_current_job_id}\n")
-        
+
         await asyncio.sleep(0.5)
-    
+
     generate_task_running = True
     generate_current_job_id = job_id
     generate_cancel_event = asyncio.Event()
     current_cancel_event = generate_cancel_event
-    
+
     try:
         if server_instance is None:
             log_error(f"服务器实例未初始化，无法执行生成任务")
             if log_callback:
                 await log_callback(f"[错误] 服务器实例未初始化\n")
             return False
-        
+
         log_info(f"开始执行批量生成任务...")
         if log_callback:
             await log_callback(f"[定时任务] 开始执行批量生成任务\n")
-        
+
         if current_cancel_event.is_set():
             log_warning(f"任务 {job_id} 被取消（检测到取消信号）")
             if log_callback:
                 await log_callback(f"[定时任务] 任务被取消\n")
             return False
-        
+
         log_info(f"正在查询待生成的章节 (current_state=2)...")
         db = get_db()
         novels_to_generate = Novel.select().where(
-            Novel.novel_name == novel_name, 
+            Novel.novel_name == novel_name,
             Novel.current_state == 2
         ).limit(chapter_count)
-        
+
         novel_list = list(novels_to_generate)
         total_count = len(novel_list)
         log_info(f"找到 {total_count} 个待生成的章节")
-        
+
         if log_callback:
             await log_callback(f"[定时任务] 找到 {total_count} 个待生成的章节\n")
-        
+
         if total_count == 0:
             log_warning(f"没有找到待生成的章节，任务结束")
             if log_callback:
                 await log_callback(f"[定时任务] 没有找到待生成的章节\n")
             return True
-        
+
         log_info(f"正在加载角色音频列表...")
         if log_callback:
             await log_callback(f"[定时任务] 正在加载角色音频列表...\n")
-        
+
         load_role_list = await load_role_audio(novel_name, server_instance)
         log_info(f"角色音频列表加载完成，共 {len(load_role_list)} 个角色")
-        
+
         log_info(f"开始生成音频任务，共 {total_count} 个章节")
         if log_callback:
             await log_callback(f"[定时任务] 开始生成音频任务，共 {total_count} 个章节\n")
-        
+
         success_count = 0
         fail_count = 0
-        
+
         for idx, novel in enumerate(novel_list, 1):
             if current_cancel_event.is_set():
                 log_warning(f"生成任务在执行中被取消: {job_id}，已处理 {idx-1} 个章节")
                 if log_callback:
                     await log_callback(f"[定时任务] 生成任务被取消，已处理 {idx-1} 个章节\n")
                 return False
-            
+
             chapter_name = novel.chapter_names if novel.chapter_names else f"章节{novel.id}"
             log_info(f"-"*60)
             log_info(f"正在生成第 {idx}/{total_count} 个章节: {chapter_name}")
             log_info(f"章节ID: {novel.id}")
-            
+
             if log_callback:
                 await log_callback(f"[定时任务] 正在生成第 {idx}/{total_count} 个章节: {chapter_name}\n")
-            
+
             try:
                 chapter_parse_obj_list = parse_novel_data_bind_role_audio(
                     novel.section_data_json,
                     novel.after_analysis_data_json,
                     novel.novel_name
                 )
-                
+
                 log_info(f"正在调用TTS生成音频...")
-                
+
                 flag = await generate_chapter_audio(
                     chapter_parse_obj_list,
                     load_role_list,
@@ -408,47 +437,47 @@ async def execute_generate_task(job_id: str, novel_name: str, chapter_count: int
                     novel.id,
                     server_instance
                 )
-                
+
                 if flag:
                     log_success(f"✓ 章节 [{chapter_name}] 生成成功")
                     if log_callback:
                         await log_callback(f"[定时任务] ✓ 章节 [{chapter_name}] 生成成功\n")
-                    
+
                     log_info(f"正在更新数据库状态: current_state = 3")
                     novel.current_state = 3
                     novel.save()
                     log_info(f"数据库状态更新完成")
-                    
+
                     success_count += 1
                 else:
                     log_error(f"✗ 章节 [{chapter_name}] 生成失败")
                     if log_callback:
                         await log_callback(f"[定时任务] ✗ 章节 [{chapter_name}] 生成失败\n")
                     fail_count += 1
-                    
+
             except Exception as chapter_error:
                 log_error(f"✗ 章节 [{chapter_name}] 处理出错: {chapter_error}")
                 if log_callback:
                     await log_callback(f"[定时任务] ✗ 章节 [{chapter_name}] 处理出错: {chapter_error}\n")
                 fail_count += 1
-        
+
         if current_cancel_event.is_set():
             log_warning(f"生成任务在完成后被取消: {job_id}")
             if log_callback:
                 await log_callback(f"[定时任务] 生成任务被取消\n")
             return False
-        
+
         log_success(f"="*80)
         log_success(f"批量生成任务执行完成！")
         log_success(f"成功: {success_count} 个章节")
         log_success(f"失败: {fail_count} 个章节")
         log_success(f"="*80)
-        
+
         if log_callback:
             await log_callback(f"[定时任务] 批量生成任务执行完成\n")
             await log_callback(f"[定时任务] 成功: {success_count} 个章节\n")
             await log_callback(f"[定时任务] 失败: {fail_count} 个章节\n")
-        
+
         return True
     except asyncio.CancelledError:
         log_warning(f"生成任务被取消: {job_id}")
@@ -457,7 +486,6 @@ async def execute_generate_task(job_id: str, novel_name: str, chapter_count: int
         raise
     except Exception as e:
         log_error(f"批量生成任务执行失败: {e}")
-        traceback.print_exc()
         if log_callback:
             await log_callback(f"[定时任务] 批量生成任务执行失败: {e}\n")
         return False
@@ -472,9 +500,9 @@ def add_parse_job(job_id: str, cron: str, novel_name: str, chapter_count: int, t
     """添加定时解析任务"""
     try:
         second, minute, hour, day, month, day_of_week, year = parse_cron(cron)
-        
+
         trigger = create_cron_trigger(second, minute, hour, day, month, day_of_week, year)
-        
+
         scheduler.add_job(
             execute_parse_task,
             trigger=trigger,
@@ -483,7 +511,7 @@ def add_parse_job(job_id: str, cron: str, novel_name: str, chapter_count: int, t
             args=[job_id, novel_name, chapter_count, thread_count],
             replace_existing=True
         )
-        
+
         db = get_db()
         task, created = ScheduledTask.get_or_create(
             job_id=job_id,
@@ -497,7 +525,7 @@ def add_parse_job(job_id: str, cron: str, novel_name: str, chapter_count: int, t
                 'update_time': datetime.datetime.now()
             }
         )
-        
+
         if not created:
             task.job_type = 'parse'
             task.cron = cron
@@ -507,11 +535,11 @@ def add_parse_job(job_id: str, cron: str, novel_name: str, chapter_count: int, t
             task.is_active = True
             task.update_time = datetime.datetime.now()
             task.save()
-        
+
         job = scheduler.get_job(job_id)
         next_run = job.next_run_time if job else None
         next_run_str = next_run.strftime("%Y-%m-%d %H:%M:%S") if next_run else "N/A"
-        
+
         log_success(f"添加解析任务成功: {job_id}")
         log_info(f"  - 小说名: {novel_name}")
         log_info(f"  - Cron: {cron}")
@@ -521,16 +549,15 @@ def add_parse_job(job_id: str, cron: str, novel_name: str, chapter_count: int, t
         return True
     except Exception as e:
         log_error(f"添加解析任务失败: {e}")
-        traceback.print_exc()
         return False
 
 def add_generate_job(job_id: str, cron: str, novel_name: str, chapter_count: int):
     """添加定时生成音频任务"""
     try:
         second, minute, hour, day, month, day_of_week, year = parse_cron(cron)
-        
+
         trigger = create_cron_trigger(second, minute, hour, day, month, day_of_week, year)
-        
+
         scheduler.add_job(
             execute_generate_task,
             trigger=trigger,
@@ -539,7 +566,7 @@ def add_generate_job(job_id: str, cron: str, novel_name: str, chapter_count: int
             args=[job_id, novel_name, chapter_count],
             replace_existing=True
         )
-        
+
         db = get_db()
         task, created = ScheduledTask.get_or_create(
             job_id=job_id,
@@ -553,7 +580,7 @@ def add_generate_job(job_id: str, cron: str, novel_name: str, chapter_count: int
                 'update_time': datetime.datetime.now()
             }
         )
-        
+
         if not created:
             task.job_type = 'generate'
             task.cron = cron
@@ -563,11 +590,11 @@ def add_generate_job(job_id: str, cron: str, novel_name: str, chapter_count: int
             task.is_active = True
             task.update_time = datetime.datetime.now()
             task.save()
-        
+
         job = scheduler.get_job(job_id)
         next_run = job.next_run_time if job else None
         next_run_str = next_run.strftime("%Y-%m-%d %H:%M:%S") if next_run else "N/A"
-        
+
         log_success(f"添加生成任务成功: {job_id}")
         log_info(f"  - 小说名: {novel_name}")
         log_info(f"  - Cron: {cron}")
@@ -576,7 +603,6 @@ def add_generate_job(job_id: str, cron: str, novel_name: str, chapter_count: int
         return True
     except Exception as e:
         log_error(f"添加生成任务失败: {e}")
-        traceback.print_exc()
         return False
 
 def remove_job(job_id: str):
@@ -584,14 +610,14 @@ def remove_job(job_id: str):
     try:
         scheduler.remove_job(job_id)
         log_info(f"从调度器删除任务: {job_id}")
-        
+
         db = get_db()
         task = ScheduledTask.select().where(ScheduledTask.job_id == job_id).first()
         if task:
             task.is_active = False
             task.save()
             log_info(f"已标记任务为停用: {job_id}")
-        
+
         log_success(f"删除任务成功: {job_id}")
         return True
     except Exception as e:
@@ -623,12 +649,12 @@ def load_jobs_from_database():
         db = get_db()
         tasks = ScheduledTask.select().where(ScheduledTask.is_active == True)
         loaded_count = 0
-        
+
         for task in tasks:
             try:
                 second, minute, hour, day, month, day_of_week, year = parse_cron(task.cron)
                 trigger = create_cron_trigger(second, minute, hour, day, month, day_of_week, year)
-                
+
                 if task.job_type == 'parse':
                     scheduler.add_job(
                         execute_parse_task,
@@ -649,16 +675,15 @@ def load_jobs_from_database():
                         replace_existing=True
                     )
                     log_info(f"已加载生成任务: {task.job_id}")
-                
+
                 loaded_count += 1
             except Exception as job_error:
                 log_error(f"加载任务 {task.job_id} 时出错: {job_error}")
-        
+
         log_success(f"从数据库加载了 {loaded_count} 个定时任务")
         return loaded_count
     except Exception as e:
         log_error(f"从数据库加载任务失败: {e}")
-        traceback.print_exc()
         return 0
 
 def get_parse_task_status():
@@ -696,10 +721,10 @@ def get_task_details(job_id: str):
         job = scheduler.get_job(job_id)
         if not job:
             return None
-        
+
         db = get_db()
         db_task = ScheduledTask.select().where(ScheduledTask.job_id == job_id).first()
-        
+
         next_run_times = []
         if hasattr(job.trigger, 'get_next_run_time'):
             from datetime import timedelta
@@ -708,7 +733,7 @@ def get_task_details(job_id: str):
                 next_time = job.trigger.get_next_run_time(base_time + timedelta(minutes=i))
                 if next_time:
                     next_run_times.append(next_time.strftime("%Y-%m-%d %H:%M:%S"))
-        
+
         return {
             "job_id": job_id,
             "name": job.name,
