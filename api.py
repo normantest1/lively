@@ -1,17 +1,19 @@
+
 import traceback
 from contextlib import asynccontextmanager
 
 from starlette.middleware.cors import CORSMiddleware
 
 from bean.beans import RoleAudio, Role, Novel, get_db, NovelName
+from logger import init_logger, log, log_error, close_logger
 from fastapi import FastAPI, HTTPException, status, Query, UploadFile, WebSocket
 from pydantic import BaseModel, ConfigDict
 from pydantic import Field as PydanticField
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 # TODO 这里是关键注释
-# from nanovllm_voxcpm.models.voxcpm.server import AsyncVoxCPMServerPool
-# from nanovllm_voxcpm import VoxCPM
+from nanovllm_voxcpm.models.voxcpm.server import AsyncVoxCPMServerPool
+from nanovllm_voxcpm import VoxCPM
 
 from typing import List, Optional
 from peewee import *
@@ -167,39 +169,55 @@ server = ""
 async def lifespan(app: FastAPI):
     global server
     """应用生命周期管理"""
-    # 检查连接状态，如果未连接才连接
+    init_logger()
+    log("="*80)
+    log("服务器启动")
+    log("="*80)
+
     if db.is_closed():
         print("Starting up, connecting to database...")
+        log("Starting up, connecting to database...")
         db.connect()
         print("Database connected")
+        log("Database connected")
     else:
         print("Database already connected")
+        log("Database already connected")
     # todo 音频模型
     if server == "":
         print("加载模型......")
-        # server = AsyncVoxCPMServerPool = VoxCPM.from_pretrained(
-        #     "./VoxCPM1.5/",
-        #     max_num_batched_tokens=8192,
-        #     max_num_seqs=16,
-        #     max_model_len=4096,
-        #     gpu_memory_utilization=0.95,
-        #     enforce_eager=False,
-        #     devices=[0]
-        # )
-    
+        log("加载模型......")
+        server = AsyncVoxCPMServerPool = VoxCPM.from_pretrained(
+            "./VoxCPM1.5/",
+            max_num_batched_tokens=8192,
+            max_num_seqs=16,
+            max_model_len=4096,
+            gpu_memory_utilization=0.95,
+            enforce_eager=False,
+            devices=[0]
+        )
+
     set_server_instance(server)
     start_scheduler()
-    
+
     yield
-    
+
     # 关闭时执行
     stop_scheduler()
     if not db.is_closed():
         print("Shutting down, closing database...")
+        log("Shutting down, closing database...")
         db.close()
         print("Database closed")
+        log("Database closed")
     print("关闭模型......")
-    # await server.stop()
+    log("关闭模型......")
+    await server.stop()
+
+    log("="*80)
+    log("服务器关闭")
+    log("="*80)
+    close_logger()
 
 # ============ FastAPI 应用 ============
 app = FastAPI(
@@ -218,6 +236,9 @@ def get_novel_or_404(novel_id: int) -> Novel:
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Novel with id {novel_id} not found"
         )
+    except Exception as e:
+        log_error(f"获取小说失败 (novel_id={novel_id}): {str(e)}")
+        raise
 
 def get_role_or_404(role_id: int) -> Role:
     """获取角色，不存在时抛出404"""
@@ -228,6 +249,9 @@ def get_role_or_404(role_id: int) -> Role:
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Role with id {role_id} not found"
         )
+    except Exception as e:
+        log_error(f"获取角色失败 (role_id={role_id}): {str(e)}")
+        raise
 
 def get_novel_name_or_404(novel_name_id: int) -> NovelName:
     """获取小说名，不存在时抛出404"""
@@ -238,6 +262,9 @@ def get_novel_name_or_404(novel_name_id: int) -> NovelName:
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"NovelName with id {novel_name_id} not found"
         )
+    except Exception as e:
+        log_error(f"获取小说名失败 (novel_name_id={novel_name_id}): {str(e)}")
+        raise
 
 def get_role_audio_or_404(role_audio_id: int) -> RoleAudio:
     """获取角色音频，不存在时抛出404"""
@@ -248,6 +275,9 @@ def get_role_audio_or_404(role_audio_id: int) -> RoleAudio:
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"RoleAudio with id {role_audio_id} not found"
         )
+    except Exception as e:
+        log_error(f"获取角色音频失败 (role_audio_id={role_audio_id}): {str(e)}")
+        raise
 # ============ Novel CRUD API ============
 
 @app.post("/api/novels", response_model=NovelResponse, status_code=status.HTTP_201_CREATED)
@@ -264,6 +294,8 @@ def create_novel(novel_data: NovelCreate):
         novel.save()
         return novel
     except Exception as e:
+        log_error(f"创建小说失败: {str(e)}")
+        traceback.print_exc()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=str(e)
@@ -333,6 +365,52 @@ def delete_novel(novel_id: int):
     return None
 
 
+@app.delete("/api/novels/by-name/{novel_name}")
+def delete_novel_by_name(novel_name: str):
+    """删除小说及其所有相关数据（novel_names、novels、roles表）"""
+    try:
+        # 开始事务
+        db.begin()
+
+        # 删除该小说名的所有角色数据
+        roles_deleted = Role.delete().where(Role.novel_name == novel_name).execute()
+        print(f"删除了 {roles_deleted} 条角色数据")
+        log(f"删除了 {roles_deleted} 条角色数据")
+
+        # 删除该小说名的所有小说章节数据
+        novels_deleted = Novel.delete().where(Novel.novel_name == novel_name).execute()
+        print(f"删除了 {novels_deleted} 条小说章节数据")
+        log(f"删除了 {novels_deleted} 条小说章节数据")
+
+        # 删除该小说名记录
+        novel_names_deleted = NovelName.delete().where(NovelName.novel_name == novel_name).execute()
+        print(f"删除了 {novel_names_deleted} 条小说名记录")
+        log(f"删除了 {novel_names_deleted} 条小说名记录")
+
+        # 提交事务
+        db.commit()
+
+        print(f"成功删除小说 {novel_name} 的所有相关数据")
+        log(f"成功删除小说 {novel_name} 的所有相关数据")
+        return {
+            "message": "删除成功",
+            "deleted_data": {
+                "roles": roles_deleted,
+                "novels": novels_deleted,
+                "novel_names": novel_names_deleted
+            }
+        }
+    except Exception as e:
+        # 回滚事务
+        db.rollback()
+        log_error(f"删除小说 {novel_name} 相关数据失败: {str(e)}")
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"删除小说相关数据失败: {str(e)}"
+        )
+
+
 @app.get("/api/novels/{novel_id}/state")
 def get_novel_state(novel_id: int):
     """获取小说的详细状态信息"""
@@ -363,11 +441,13 @@ def get_novel_state(novel_id: int):
 def get_max_chapter_count(novel_name: str = Query(..., description="小说名称")):
     """获取指定小说在current_state=2时的最大章节数"""
     try:
-        max_count = Novel.select().where((Novel.novel_name == "沧元图") & (Novel.current_state == 2)).count()
+        max_count = Novel.select().where((Novel.novel_name == novel_name) & (Novel.current_state == 2)).count()
 
         return max_count
     except Exception as e:
         print(f"获取最大章节数失败: {e}")
+        log(f"获取最大章节数失败: {e}")
+        log_error(f"获取最大章节数失败: {str(e)}")
         return 0
 
 
@@ -384,10 +464,15 @@ async def batch_generate_novel(novel_name: str, chapter_count: int):
     2. 实时发送日志到前端
     """
     print("*" * 50)
+    log("*" * 50)
     print("开始批量生成小说")
+    log("开始批量生成小说")
     print(f"小说名称: {novel_name}")
+    log(f"小说名称: {novel_name}")
     print(f"章节数: {chapter_count}")
+    log(f"章节数: {chapter_count}")
     print("*" * 50)
+    log("*" * 50)
 
     async def log_to_frontend(message):
         """将日志消息发送到WebSocket前端"""
@@ -395,6 +480,8 @@ async def batch_generate_novel(novel_name: str, chapter_count: int):
             await manager.send_message(message + "\n")
         except Exception as e:
             print(f"发送日志到前端失败: {e}")
+            log(f"发送日志到前端失败: {e}")
+            log_error(f"发送日志到前端失败: {str(e)}")
 
     # 修改这里：添加批量生成的逻辑
     # 例如：
@@ -404,6 +491,7 @@ async def batch_generate_novel(novel_name: str, chapter_count: int):
     # - 更新数据库状态
 
     print(f"开始生成任务...")
+    log(f"开始生成任务...")
     await log_to_frontend(f"开始为小说 '{novel_name}' 生成 {chapter_count} 个章节的音频...")
 
     # ============ 修改这里开始 ============
@@ -415,7 +503,7 @@ async def batch_generate_novel(novel_name: str, chapter_count: int):
         novels = Novel.select().where(Novel.novel_name == novel_name, Novel.current_state == 2).limit(chapter_count).limit(chapter_count)
         # TODO 记得修改386行和392行的注释
         load_role_list = []
-        # load_role_list = await load_role_audio(novel_name, server)
+        load_role_list = await load_role_audio(novel_name, server)
         for novel in novels:
             chapter_parse_obj_list = parse_novel_data_bind_role_audio(novel.section_data_json,novel.after_analysis_data_json,novel.novel_name)
             # print("*" * 80)
@@ -423,14 +511,19 @@ async def batch_generate_novel(novel_name: str, chapter_count: int):
             # print("*"*80)
             # await generate_chapter_audio_test(chapter_parse_obj_list, load_role_list, novel_name, server)
         #     TODO 这里需要修改
-        #     flag = await generate_chapter_audio(chapter_parse_obj_list,load_role_list,novel_name,novel.id,server)
-        #     if flag:
-        #        print(f"小说 {novel.novel_name} 章节 {novel.chapter_names} 生成完成，请去项目目录下的save文件夹下查看")
-        #        novel.current_state = 3
-        #        novel.save()
-        #     else:
-        #         print(f"小说 {novel.novel_name} 章节 {novel.chapter_names} 生成失败，请重试")
+            flag = await generate_chapter_audio(chapter_parse_obj_list,load_role_list,novel_name,novel.id,server)
+            if flag:
+               print(f"小说 {novel.novel_name} 章节 {novel.chapter_names} 生成完成，请去项目目录下的save文件夹下查看")
+               log(f"小说 {novel.novel_name} 章节 {novel.chapter_names} 生成完成，请去项目目录下的save文件夹下查看")
+               novel.current_state = 3
+               novel.save()
+            else:
+                print(f"小说 {novel.novel_name} 章节 {novel.chapter_names} 生成失败，请重试")
+                log(f"小说 {novel.novel_name} 章节 {novel.chapter_names} 生成失败，请重试")
     except Exception as e:
+        print(f"批量生成小说时出错: {str(e)}")
+        log(f"批量生成小说时出错: {str(e)}")
+        log_error(f"批量生成小说时出错: {str(e)}")
         traceback.print_exc()
 
 
@@ -446,6 +539,7 @@ async def batch_generate_novel(novel_name: str, chapter_count: int):
 
     await log_to_frontend("所有章节音频生成完成！")
     print("批量生成完成")
+    log("批量生成完成")
 
     return {
         "message": "批量生成任务已完成",
@@ -474,7 +568,11 @@ def create_role(role_data: RoleCreate):
         role = Role(**role_data.dict())
         role.save()
         return role
+    except HTTPException:
+        raise
     except Exception as e:
+        log_error(f"创建角色失败: {str(e)}")
+        traceback.print_exc()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=str(e)
@@ -577,7 +675,11 @@ def create_novel_name(novel_name_data: NovelNameCreate):
         novel_name = NovelName(**novel_name_data.dict())
         novel_name.save()
         return novel_name
+    except HTTPException:
+        raise
     except Exception as e:
+        log_error(f"创建小说名失败: {str(e)}")
+        traceback.print_exc()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=str(e)
@@ -653,7 +755,11 @@ def create_role_audio(role_audio_data: RoleAudioCreate):
         role_audio = RoleAudio(**role_audio_data.dict())
         role_audio.save()
         return role_audio
+    except HTTPException:
+        raise
     except Exception as e:
+        log_error(f"创建角色音频失败: {str(e)}")
+        traceback.print_exc()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=str(e)
@@ -799,6 +905,8 @@ def get_audio_file(file_path: str):
     except HTTPException:
         raise
     except Exception as e:
+        log_error(f"读取音频文件失败: {str(e)}")
+        traceback.print_exc()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"读取音频文件失败: {str(e)}"
@@ -882,6 +990,9 @@ def bind_role_audio(role_id: int, request: dict):
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Audio {audio_name} not found"
         )
+    except Exception as e:
+        log_error(f"查询角色音频失败: {str(e)}")
+        raise
 
     # 更新角色的绑定信息
     role.is_bind = True
@@ -994,8 +1105,11 @@ def upload_novels_batch(files: List[UploadFile]):
 
             # 打印文件名和内容信息
             print(f"文件名: {filename}")
+            log(f"文件名: {filename}")
             print(f"内容长度: {len(text_content)} 字符")
+            log(f"内容长度: {len(text_content)} 字符")
             print("-" * 50)
+            log("-" * 50)
 
             # 提取小说名（去掉.txt扩展名）
             novel_name = filename.replace(".txt", "")
@@ -1010,6 +1124,9 @@ def upload_novels_batch(files: List[UploadFile]):
             })
         except Exception as e:
             print(f"处理文件 {filename} 时出错: {str(e)}")
+            log(f"处理文件 {filename} 时出错: {str(e)}")
+            log_error(f"处理文件 {filename} 时出错: {str(e)}")
+            traceback.print_exc()
             results.append({
                 "filename": filename,
                 "status": "error",
@@ -1066,6 +1183,8 @@ class ConnectionManager:
                 await connection.send_text(message)
             except Exception as e:
                 print(f"发送消息失败: {e}")
+                log(f"发送消息失败: {e}")
+                log_error(f"发送消息失败: {str(e)}")
                 disconnected.append(connection)
 
         # 清理断开的连接
@@ -1099,6 +1218,8 @@ async def websocket_endpoint(websocket: WebSocket):
                     break
     except Exception as e:
         print(f"WebSocket连接异常: {e}")
+        log(f"WebSocket连接异常: {e}")
+        log_error(f"WebSocket连接异常: {str(e)}")
     finally:
         manager.disconnect(websocket)
 
@@ -1118,11 +1239,17 @@ async def batch_analyze_novel(novel_name: str, thread_count: int, chapter_count:
     """
     # 打印接收到的参数
     print(f"=" * 50)
+    log(f"=" * 50)
     print(f"开始批量解析小说")
+    log(f"开始批量解析小说")
     print(f"小说名称: {novel_name}")
+    log(f"小说名称: {novel_name}")
     print(f"线程数: {thread_count}")
+    log(f"线程数: {thread_count}")
     print(f"章节数: {chapter_count}")
+    log(f"章节数: {chapter_count}")
     print(f"=" * 50)
+    log(f"=" * 50)
 
     # 定义日志回调函数，用于将日志发送到前端
     async def log_to_frontend(message):
@@ -1131,6 +1258,8 @@ async def batch_analyze_novel(novel_name: str, thread_count: int, chapter_count:
             await manager.send_message(message + "\n")
         except Exception as e:
             print(f"发送日志到前端失败: {e}")
+            log(f"发送日志到前端失败: {e}")
+            log_error(f"发送日志到前端失败: {str(e)}")
 
     # 调用main函数，传递参数和日志回调
     # main函数现在支持novel_name, chapter_count, thread_count和log_callback参数
@@ -1142,6 +1271,7 @@ async def batch_analyze_novel(novel_name: str, thread_count: int, chapter_count:
     )
 
     print(f"解析完成")
+    log(f"解析完成")
     await manager.send_message(f"解析完成\n")
 
     return {
@@ -1204,6 +1334,8 @@ def get_settings():
             return json.load(f)
     except Exception as e:
         print(f"读取配置文件失败: {e}")
+        log(f"读取配置文件失败: {e}")
+        log_error(f"读取配置文件失败: {str(e)}")
         return get_default_settings()
 
 
@@ -1221,7 +1353,8 @@ def save_settings(settings: SettingsRequest):
             try:
                 with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
                     existing_settings = json.load(f)
-            except:
+            except Exception as e:
+                log_error(f"读取配置文件失败: {str(e)}")
                 existing_settings = {}
 
         existing_settings.update(settings_dict)
@@ -1234,6 +1367,8 @@ def save_settings(settings: SettingsRequest):
             "settings": existing_settings
         }
     except Exception as e:
+        log_error(f"保存设置失败: {str(e)}")
+        traceback.print_exc()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"保存设置失败: {str(e)}"
@@ -1264,7 +1399,7 @@ async def create_scheduled_parse_job(job: ScheduledParseJob):
             chapter_count=job.chapter_count,
             thread_count=job.thread_count
         )
-        
+
         if success:
             return {
                 "message": "定时解析任务创建成功",
@@ -1277,6 +1412,8 @@ async def create_scheduled_parse_job(job: ScheduledParseJob):
                 "status": "failed"
             }
     except Exception as e:
+        log_error(f"创建定时解析任务失败: {str(e)}")
+        traceback.print_exc()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"创建定时任务失败: {str(e)}"
@@ -1292,7 +1429,7 @@ async def create_scheduled_generate_job(job: ScheduledGenerateJob):
             novel_name=job.novel_name,
             chapter_count=job.chapter_count
         )
-        
+
         if success:
             return {
                 "message": "定时生成任务创建成功",
@@ -1305,6 +1442,8 @@ async def create_scheduled_generate_job(job: ScheduledGenerateJob):
                 "status": "failed"
             }
     except Exception as e:
+        log_error(f"创建定时生成任务失败: {str(e)}")
+        traceback.print_exc()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"创建定时任务失败: {str(e)}"
@@ -1315,7 +1454,7 @@ async def delete_scheduled_job(job_id: str):
     """删除定时任务"""
     try:
         success = remove_job(job_id)
-        
+
         if success:
             return {
                 "message": "定时任务删除成功",
@@ -1328,6 +1467,8 @@ async def delete_scheduled_job(job_id: str):
                 "status": "failed"
             }
     except Exception as e:
+        log_error(f"删除定时任务失败: {str(e)}")
+        traceback.print_exc()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"删除定时任务失败: {str(e)}"
@@ -1343,6 +1484,8 @@ async def list_scheduled_tasks():
             "status": "success"
         }
     except Exception as e:
+        log_error(f"获取定时任务列表失败: {str(e)}")
+        traceback.print_exc()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"获取定时任务列表失败: {str(e)}"
@@ -1355,6 +1498,8 @@ async def get_parse_task_running_status():
         status = get_parse_task_status()
         return status
     except Exception as e:
+        log_error(f"获取解析任务状态失败: {str(e)}")
+        traceback.print_exc()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"获取任务状态失败: {str(e)}"
@@ -1367,6 +1512,8 @@ async def get_generate_task_running_status():
         status = get_generate_task_status()
         return status
     except Exception as e:
+        log_error(f"获取生成任务状态失败: {str(e)}")
+        traceback.print_exc()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"获取任务状态失败: {str(e)}"
@@ -1382,6 +1529,8 @@ async def get_scheduled_tasks_details():
             "status": "success"
         }
     except Exception as e:
+        log_error(f"获取所有任务详情失败: {str(e)}")
+        traceback.print_exc()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"获取任务详情失败: {str(e)}"
@@ -1401,6 +1550,8 @@ async def get_scheduled_task_detail(job_id: str):
     except HTTPException:
         raise
     except Exception as e:
+        log_error(f"获取任务详情失败 (job_id={job_id}): {str(e)}")
+        traceback.print_exc()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"获取任务详情失败: {str(e)}"
@@ -1417,6 +1568,8 @@ async def get_scheduled_tasks_logs(limit: int = 100):
             "status": "success"
         }
     except Exception as e:
+        log_error(f"获取任务日志失败: {str(e)}")
+        traceback.print_exc()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"获取日志失败: {str(e)}"
@@ -1432,6 +1585,8 @@ async def clear_scheduled_tasks_logs():
             "status": "success"
         }
     except Exception as e:
+        log_error(f"清空任务日志失败: {str(e)}")
+        traceback.print_exc()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"清空日志失败: {str(e)}"
@@ -1445,13 +1600,15 @@ async def get_max_chapters(novel_name: str, current_state: int):
             Novel.novel_name == novel_name,
             Novel.current_state == current_state
         ).count()
-        
+
         return {
             "novel_name": novel_name,
             "current_state": current_state,
             "max_chapters": count
         }
     except Exception as e:
+        log_error(f"获取最大章节数失败 (novel_name={novel_name}, current_state={current_state}): {str(e)}")
+        traceback.print_exc()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"获取最大章节数失败: {str(e)}"

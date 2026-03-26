@@ -6,6 +6,7 @@
           <span>小说管理</span>
           <div>
             <el-button type="primary" @click="handleCreate">添加小说</el-button>
+            <el-button type="danger" @click="handleDeleteNovelData">删除小说相关数据</el-button>
             <el-upload
               ref="uploadRef"
               :auto-upload="false"
@@ -263,6 +264,64 @@
         <el-button type="primary" @click="handleBatchSubmit">开始解析</el-button>
       </template>
     </el-dialog>
+
+    <!-- 删除小说相关数据对话框 -->
+    <el-dialog
+      v-model="deleteDialogVisible"
+      title="删除小说相关数据"
+      width="600px"
+    >
+      <el-form :model="deleteForm" label-width="140px">
+        <el-form-item label="选择小说" required>
+          <el-select
+            v-model="deleteForm.novel_name"
+            placeholder="请选择要删除的小说"
+            filterable
+            style="width: 100%"
+            clearable
+            @clear="handleClearDeleteForm"
+          >
+            <el-option
+              v-for="name in novelNamesList"
+              :key="name"
+              :label="name"
+              :value="name"
+            />
+          </el-select>
+        </el-form-item>
+        <el-alert
+          v-if="deleteForm.novel_name"
+          title="危险操作警告"
+          type="error"
+          :closable="false"
+          show-icon
+          style="margin-top: 20px;"
+        >
+          <template #default>
+            <div style="font-size: 14px; line-height: 1.6;">
+              <p><strong>这将删除以下所有相关数据：</strong></p>
+              <ul style="margin: 10px 0; padding-left: 20px;">
+                <li>novel_names 表中该小说的记录</li>
+                <li>novels 表中该小说的所有章节数据（原始数据、解析数据）</li>
+                <li>roles 表中该小说的所有角色数据</li>
+              </ul>
+              <p style="color: #f56c6c; font-weight: bold;">此操作不可逆，请谨慎操作！</p>
+            </div>
+          </template>
+        </el-alert>
+      </el-form>
+      <template #footer>
+        <el-button @click="deleteDialogVisible = false">取消</el-button>
+        <el-button
+          type="danger"
+          @click="handleConfirmDelete"
+          :disabled="!deleteForm.novel_name"
+          :loading="deleteLoading"
+        >
+          确认删除
+        </el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -283,6 +342,12 @@ const novelNamesList = ref([])
 const showLogArea = ref(false)
 const logContent = ref('')
 let websocket = null
+
+const deleteDialogVisible = ref(false)
+const deleteLoading = ref(false)
+const deleteForm = reactive({
+  novel_name: ''
+})
 
 const stateDialogVisible = ref(false)
 const stateMessage = ref('')
@@ -704,6 +769,53 @@ const handleGenerateSubmit = async () => {
     ElMessage.success('批量生成任务已提交')
   } catch (error) {
     console.error('批量生成失败:', error)
+  }
+}
+
+const handleDeleteNovelData = () => {
+  deleteForm.novel_name = ''
+  deleteDialogVisible.value = true
+}
+
+const handleClearDeleteForm = () => {
+  deleteForm.novel_name = ''
+}
+
+const handleConfirmDelete = async () => {
+  if (!deleteForm.novel_name) {
+    ElMessage.warning('请选择要删除的小说')
+    return
+  }
+
+  try {
+    await ElMessageBox.confirm(
+      '这将删除导入小说的所有原始数据、解析数据、角色数据，还继续吗？继续的话请点击确认按钮',
+      '危险操作确认',
+      {
+        confirmButtonText: '确认',
+        cancelButtonText: '取消',
+        type: 'error'
+      }
+    )
+
+    deleteLoading.value = true
+
+    // 调用后端API删除小说所有相关数据
+    await api.deleteNovelByName(deleteForm.novel_name)
+
+    ElMessage.success(`成功删除小说 "${deleteForm.novel_name}" 的所有相关数据`)
+    deleteDialogVisible.value = false
+
+    // 刷新数据
+    await loadData()
+    await loadNovelNames()
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('删除小说相关数据失败:', error)
+      ElMessage.error('删除失败: ' + (error.message || '未知错误'))
+    }
+  } finally {
+    deleteLoading.value = false
   }
 }
 </script>

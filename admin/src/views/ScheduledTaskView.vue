@@ -19,12 +19,12 @@
             </template>
             <el-form :model="parseForm" label-width="140px">
               <el-form-item label="Cron表达式">
-                <el-input 
-                  v-model="parseForm.cron" 
-                  placeholder="* * * * * (分 时 日 月 周)"
+                <el-input
+                  v-model="parseForm.cron"
+                  placeholder="0 * * * * * * (秒 分 时 日 月 周 年)"
                   style="width: 400px"
                 />
-                <el-tooltip content="格式：分 时 日 月 周，例如：0 2 * * * 表示每天凌晨2点执行">
+                <el-tooltip content="格式：秒 分 时 日 月 周 年，例如：0 0/5 * * * * * 表示每五分钟执行">
                   <el-icon style="margin-left: 8px; cursor: pointer;"><QuestionFilled /></el-icon>
                 </el-tooltip>
               </el-form-item>
@@ -96,12 +96,12 @@
             </template>
             <el-form :model="generateForm" label-width="140px">
               <el-form-item label="Cron表达式">
-                <el-input 
-                  v-model="generateForm.cron" 
-                  placeholder="* * * * * (分 时 日 月 周)"
+                <el-input
+                  v-model="generateForm.cron"
+                  placeholder="0 * * * * * * (秒 分 时 日 月 周 年)"
                   style="width: 400px"
                 />
-                <el-tooltip content="格式：分 时 日 月 周，例如：0 3 * * * 表示每天凌晨3点执行">
+                <el-tooltip content="格式：秒 分 时 日 月 周 年，例如：0 0/5 * * * * * 表示每五分钟执行">
                   <el-icon style="margin-left: 8px; cursor: pointer;"><QuestionFilled /></el-icon>
                 </el-tooltip>
               </el-form-item>
@@ -256,7 +256,7 @@ const taskLogs = ref('')
 let logsRefreshTimer = null
 
 const parseForm = reactive({
-  cron: '0 2 * * *',
+  cron: '0 0 2 * * * *',
   novel_name: '',
   chapter_count: 10,
   thread_count: 4,
@@ -264,7 +264,7 @@ const parseForm = reactive({
 })
 
 const generateForm = reactive({
-  cron: '0 3 * * *',
+  cron: '0 0 3 * * * *',
   novel_name: '',
   chapter_count: 10,
   max_chapters: 0

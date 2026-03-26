@@ -35,6 +35,9 @@ export default {
   deleteNovel(id) {
     return apiClient.delete(`/novels/${id}`)
   },
+  deleteNovelByName(novelName) {
+    return apiClient.delete(`/novels/by-name/${encodeURIComponent(novelName)}`).then(res => res.data)
+  },
   uploadNovelsBatch(files) {
     const formData = new FormData()
     files.forEach(file => {
