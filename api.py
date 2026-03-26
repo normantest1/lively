@@ -437,6 +437,117 @@ def get_novel_state(novel_id: int):
     }
 
 
+class BatchUpdateStateRequest(BaseModel):
+    novel_ids: List[int]
+    new_state: int
+
+
+@app.post("/api/novels/batch-update-state")
+def batch_update_novels_state(request: BatchUpdateStateRequest):
+    """批量更新小说状态"""
+    try:
+        novel_ids = request.novel_ids
+        new_state = request.new_state
+
+        # 查询选中的小说
+        novels = Novel.select().where(Novel.id.in_(novel_ids))
+        novels_list = list(novels)
+
+        if not novels_list:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="未找到指定的小说"
+            )
+
+        # 检查所有小说的状态是否相同
+        current_states = set(novel.current_state for novel in novels_list)
+        if len(current_states) != 1:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="所选小说的状态不同，无法批量修改"
+            )
+
+        current_state = novels_list[0].current_state
+
+        # 如果状态是1，不允许修改
+        if current_state == 1:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="状态为1（已分片待解析）的小说不允许修改状态"
+            )
+
+        # 验证新状态是否有效（不能改为1）
+        if new_state == 1:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="不允许将状态修改为1（已分片待解析）"
+            )
+
+        # 开始事务
+        db.begin()
+
+        updated_count = 0
+        for novel in novels_list:
+            if new_state == 1:
+                # 从2降级到1：清空解析数据
+                novel.after_analysis_data_json = ""
+                novel.current_state = new_state
+                novel.save()
+                updated_count += 1
+
+                # 更新roles表的chapter_count
+                roles = Role.select().where(Role.novel_name == novel.novel_name)
+                for role in roles:
+                    role.chapter_count = max(0, role.chapter_count - 1)
+                    role.save()
+
+                print(f"小说 {novel.novel_name} 状态从 {current_state} 降级到 {new_state}，chapter_count减少1")
+                log(f"小说 {novel.novel_name} 状态从 {current_state} 降级到 {new_state}，chapter_count减少1")
+
+            elif new_state == 2:
+                # 从3降级到2：直接修改状态
+                novel.current_state = new_state
+                novel.save()
+                updated_count += 1
+
+                print(f"小说 {novel.novel_name} 状态从 {current_state} 修改为 {new_state}")
+                log(f"小说 {novel.novel_name} 状态从 {current_state} 修改为 {new_state}")
+
+            elif new_state == 3:
+                # 从2升级到3：直接修改状态
+                novel.current_state = new_state
+                novel.save()
+                updated_count += 1
+
+                print(f"小说 {novel.novel_name} 状态从 {current_state} 修改为 {new_state}")
+                log(f"小说 {novel.novel_name} 状态从 {current_state} 修改为 {new_state}")
+
+        # 提交事务
+        db.commit()
+
+        print(f"成功批量更新 {updated_count} 条小说数据的状态")
+        log(f"成功批量更新 {updated_count} 条小说数据的状态")
+
+        return {
+            "message": "批量更新成功",
+            "updated_count": updated_count,
+            "old_state": current_state,
+            "new_state": new_state
+        }
+
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as e:
+        db.rollback()
+        log_error(f"批量更新小说状态失败: {str(e)}")
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"批量更新小说状态失败: {str(e)}"
+        )
+
+
 @app.get("/api/novel/max-chapter-count")
 def get_max_chapter_count(novel_name: str = Query(..., description="小说名称")):
     """获取指定小说在current_state=2时的最大章节数"""
