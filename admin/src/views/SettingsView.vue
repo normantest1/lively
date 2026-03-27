@@ -76,6 +76,20 @@
           />
         </el-form-item>
 
+        <el-form-item label="绑定音频的出场率" prop="bind_audio_presence_rate">
+          <el-input-number
+            v-model="formData.bind_audio_presence_rate"
+            :min="0"
+            :max="1"
+            :step="0.1"
+            :precision="2"
+            style="width: 100%"
+          />
+          <div style="color: #909399; font-size: 12px; margin-top: 5px;">
+            当角色出场率大于此值时，自动绑定音频（值范围：0-1，例如：0.4 表示 40%）
+          </div>
+        </el-form-item>
+
         <el-form-item>
           <el-button type="primary" @click="handleSave" :loading="saving">保存设置</el-button>
           <el-button @click="handleReset">重置</el-button>
@@ -101,7 +115,8 @@ const formData = reactive({
   base_url: 'https://api.openai.com/v1',
   model_name: 'gpt-3.5-turbo',
   max_token: 2000,
-  preload_role_count: 5
+  preload_role_count: 5,
+  bind_audio_presence_rate: 0.4
 })
 
 const formRules = {
@@ -125,6 +140,9 @@ const formRules = {
   ],
   preload_role_count: [
     { required: true, message: '请输入预加载角色个数', trigger: 'blur' }
+  ],
+  bind_audio_presence_rate: [
+    { required: true, message: '请输入绑定音频的出场率', trigger: 'blur' }
   ]
 }
 
@@ -139,7 +157,8 @@ const loadSettings = async () => {
       base_url: data.base_url || 'https://api.openai.com/v1',
       model_name: data.model_name || 'gpt-3.5-turbo',
       max_token: data.max_token || 2000,
-      preload_role_count: data.preload_role_count || 5
+      preload_role_count: data.preload_role_count || 5,
+      bind_audio_presence_rate: data.bind_audio_presence_rate || 0.4
     })
   } catch (error) {
     console.error('加载设置失败:', error)

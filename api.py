@@ -1419,6 +1419,7 @@ class SettingsRequest(BaseModel):
     model_name: Optional[str] = None
     max_token: Optional[int] = None
     preload_role_count: Optional[int] = None
+    bind_audio_presence_rate: Optional[float] = None
 
 
 def get_default_settings() -> dict:
@@ -1430,7 +1431,8 @@ def get_default_settings() -> dict:
         "base_url": "https://api.openai.com/v1",
         "model_name": "gpt-3.5-turbo",
         "max_token": 2000,
-        "preload_role_count": 5
+        "preload_role_count": 5,
+        "bind_audio_presence_rate": 0.4
     }
 
 

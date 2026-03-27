@@ -384,7 +384,7 @@ def update_audio_role():
                 audio_text = f.read()
             audio_path = ROOT_DIR / f"audios/{role_name}/audio.wav"
             audio_uri = f"{role_name}/audio.wav"
-            old_role = Role.get_or_none(Role.role_name == role_name)
+            old_role = RoleAudio.get_or_none(RoleAudio.role_name == role_name)
             # 如果角色不存在，则添加角色
             if old_role is None:
                 RoleAudio.create(
@@ -630,30 +630,17 @@ async def generate_chapter_audio_test(chapter_role_list,role_audio_id,novel_name
         traceback.print_exc()
         return False
 if __name__ == '__main__':
-    # # 加载配置信息
-    # load_role_count = load_config(config_path, "load_role_count")
-    # # 查询当前解析的最大章节数
-    # role_chapter_max = Role.select().where(
-    #     Role.novel_name == "沧元图"
-    # ).order_by(Role.create_time.asc()).first()
-    # # 将常用的几个角色信息加载出来
-    # text_role_lsit = Role.select().order_by(
-    #     -(
-    #             Role.role_count / role_chapter_max.chapter_count
-    #     )
-    # ).limit(load_role_count)
-    # audio_role_name_list = []
-    # for role in text_role_lsit:
-    #     if role.bind_audio_name != "":
-    #
-    #         audio_role_name_list.append(role.bind_audio_name)
-    # print(audio_role_name_list)
-    # audio_role_list = RoleAudio.select().where(RoleAudio.role_name.in_(audio_role_name_list))
-    #
-    # load_role_list = []
-    # for audio_role in audio_role_list:
-    #
-    #     with open(audio_role.audio_path, "rb") as f:
-    #         wav_bytes = f.read()
-    #         print("读取成功")
+    # folder_path = './audios'
+    # role_name_list = get_folders(folder_path)
+    # for role_name in role_name_list:
+    #     with open(f"{folder_path}/{role_name}/gender.txt", "r", encoding="utf-8") as f:
+    #         role_gender = f.read()
+    #     with open(f"{folder_path}/{role_name}/text.txt", "r", encoding="utf-8") as f:
+    #         audio_text = f.read()
+    #     audio_path = ROOT_DIR / f"audios/{role_name}/audio.wav"
+    #     audio_uri = f"{role_name}/audio.wav"
+    #     old_role = RoleAudio.get_or_none(RoleAudio.role_name == role_name)
+    #     # 如果角色不存在，则添加角色
+    #     if old_role is None:
+    #         print(f"扫描到当前角色名 {role_name} 不在数据表中，添加数据：")
     pass
