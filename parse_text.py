@@ -674,9 +674,6 @@ async def async_parse_text(novel_name=None, chapter_count=None, thread_count=Non
                     (Role.novel_name == novel.novel_name)
                 )
                 gender = role.get("gender")
-
-
-
                 if gender != "男":
                     gender = "女"
                 # 如果角色信息不存在，则添加新的角色信息
@@ -908,12 +905,15 @@ def parse_novel_data_bind_role_audio(text_json,parse_text_json,novel_name):
                                 bind_audio_name = temp_audio_role.role_name
                                 print(f"所有音频角色已被分配完毕，正在随机分配已有的音频角色：{temp_audio_role.role_name}")
 
-                            #为出场率大于0.3的角色绑定音频
-                            if role.role_name != "BUG角色" and role.presence_rate > 0.32:
+                            #为出场率大于阈值的角色绑定音频
+                            bind_audio_threshold = load_config(config_path, "bind_audio_presence_rate")
+                            if bind_audio_threshold is None:
+                                bind_audio_threshold = 0.15
+                            if role.role_name != "BUG角色" and role.presence_rate > bind_audio_threshold:
                                 role.bind_audio_name = bind_audio_name
                                 role.is_bind = True
-                                log(f"角色 {role.role_name} 的出场率为 {str(role.presence_rate)} ,大于33%，为他/她绑定音频角色：{bind_audio_name}")
-                                print(f"角色 {role.role_name} 的出场率为 {str(role.presence_rate)} ,大于33%，为他/她绑定音频角色：{bind_audio_name}")
+                                log(f"角色 {role.role_name} 的出场率为 {str(role.presence_rate)},大于{str(bind_audio_threshold*100)}%，为他/她绑定音频角色：{bind_audio_name}")
+                                print(f"角色 {role.role_name} 的出场率为 {str(role.presence_rate)},大于{str(bind_audio_threshold*100)}%，为他/她绑定音频角色：{bind_audio_name}")
                                 role.save()
                         elif role.bind_audio_name != "":
                             bind_audio_name = role.bind_audio_name
