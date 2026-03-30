@@ -161,6 +161,12 @@ export default {
   getStatsPending() {
     return apiClient.get('/stats/pending').then(res => res.data)
   },
+  getStatsNovels() {
+    return apiClient.get('/stats/novels').then(res => res.data)
+  },
+  getStatsTopRoles(limit) {
+    return apiClient.get('/stats/roles/top', { params: { limit } }).then(res => res.data)
+  },
 
   // Settings APIs
   getSettings() {
