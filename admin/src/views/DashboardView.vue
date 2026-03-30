@@ -92,19 +92,8 @@
           <span>小说状态分布</span>
         </div>
       </template>
-      <div class="chart-container">
-        <el-table :data="novels" v-loading="loading" stripe max-height="300">
-          <el-table-column prop="novel_name" label="小说名" min-width="150" show-overflow-tooltip />
-          <el-table-column prop="chapter_count" label="章节数" width="100" />
-          <el-table-column prop="role_count" label="角色数" width="100" />
-          <el-table-column label="状态" width="120">
-            <template #default="{ row }">
-              <el-tag :type="getStateType(row.current_state)">
-                {{ row.state_name || getStateName(row.current_state) }}
-              </el-tag>
-            </template>
-          </el-table-column>
-        </el-table>
+      <div class="chart-container" v-loading="loading">
+        <el-chart :option="stateChartOption" autoresize style="height: 300px" />
       </div>
     </el-card>
 
@@ -144,15 +133,53 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { Reading, User, Microphone, Warning } from '@element-plus/icons-vue'
+import { use } from 'echarts/core'
+import { BarChart } from 'echarts/charts'
+import { GridComponent, TooltipComponent } from 'echarts/components'
+import { CanvasRenderer } from 'echarts/renderers'
+import VChart from 'vue-echarts'
 import api from '@/api'
+
+use([BarChart, GridComponent, TooltipComponent, CanvasRenderer])
 
 const loading = ref(false)
 const overview = ref({})
 const pending = ref({})
 const novels = ref([])
 const topRoles = ref([])
+
+// 计算小说状态分布数据
+const stateDistribution = computed(() => {
+  const stats = { 1: 0, 2: 0, 3: 0 }
+  novels.value.forEach(novel => {
+    if (novel.current_state in stats) {
+      stats[novel.current_state]++
+    }
+  })
+  return [
+    { state: '已分片待解析', count: stats[1] },
+    { state: '已解析待合成', count: stats[2] },
+    { state: '已合成语音', count: stats[3] }
+  ]
+})
+
+const stateChartOption = computed(() => ({
+  tooltip: { trigger: 'axis' },
+  xAxis: {
+    type: 'category',
+    data: stateDistribution.value.map(d => d.state)
+  },
+  yAxis: { type: 'value' },
+  series: [{
+    type: 'bar',
+    data: stateDistribution.value.map(d => d.count),
+    itemStyle: {
+      color: (params) => ['#409eff', '#e6a23c', '#67c23a'][params.dataIndex]
+    }
+  }]
+}))
 
 const getStateType = (state) => {
   const types = { 1: 'info', 2: 'warning', 3: 'success' }
