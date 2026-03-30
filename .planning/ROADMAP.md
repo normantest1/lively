@@ -19,6 +19,13 @@
 4. 未解析/未生成数据准确统计
 5. 页面响应式布局正常
 
+**Plans:** 3 plans
+
+**Plan list:**
+- [ ] 01-01-PLAN.md — Backend API: overview + pending endpoints
+- [ ] 01-02-PLAN.md — Backend API: novels + top roles endpoints
+- [ ] 01-03-PLAN.md — Frontend: DashboardView component
+
 **UI hint:** yes
 
 ---
@@ -43,4 +50,4 @@
 
 ---
 
-*Last updated: 2026-03-30 after initialization*
+*Last updated: 2026-03-30 after planning Phase 1*
