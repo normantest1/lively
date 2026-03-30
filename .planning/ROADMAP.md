@@ -22,7 +22,7 @@
 **Plans:** 3 plans
 
 **Plan list:**
-- [ ] 01-01-PLAN.md — Backend API: overview + pending endpoints
+- [x] 01-01-PLAN.md — Backend API: overview + pending endpoints
 - [ ] 01-02-PLAN.md — Backend API: novels + top roles endpoints
 - [ ] 01-03-PLAN.md — Frontend: DashboardView component
 
