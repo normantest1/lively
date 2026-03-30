@@ -58,7 +58,7 @@
 
       <!-- Chapter Stats Summary -->
       <el-row :gutter="20" class="stat-row">
-        <el-col :span="12">
+        <el-col :span="8">
           <div class="info-card">
             <div class="info-item">
               <span class="info-label">总章节数：</span>
@@ -66,7 +66,15 @@
             </div>
           </div>
         </el-col>
-        <el-col :span="12">
+        <el-col :span="8">
+          <div class="info-card">
+            <div class="info-item">
+              <span class="info-label">平均每本章节数：</span>
+              <span class="info-value">{{ overview.avg_chapters_per_novel || 0 }}</span>
+            </div>
+          </div>
+        </el-col>
+        <el-col :span="8">
           <div class="info-card">
             <div class="info-item">
               <span class="info-label">待解析小说：</span>
