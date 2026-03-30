@@ -19,12 +19,12 @@
 4. 未解析/未生成数据准确统计
 5. 页面响应式布局正常
 
-**Plans:** 3 plans
+**Plans:** 3/3 plans complete
 
 **Plan list:**
 - [x] 01-01-PLAN.md — Backend API: overview + pending endpoints
 - [x] 01-02-PLAN.md — Backend API: novels + top roles endpoints
-- [ ] 01-03-PLAN.md — Frontend: DashboardView component
+- [x] 01-03-PLAN.md — Frontend: DashboardView component
 
 **UI hint:** yes
 
@@ -40,7 +40,7 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| UI-STATS-01 | Phase 1 | Pending |
+| UI-STATS-01 | Phase 1 | Complete |
 | UI-STATS-02 | Phase 1 | Complete |
 
 **Coverage:**
@@ -50,4 +50,4 @@
 
 ---
 
-*Last updated: 2026-03-30 after planning Phase 1*
+*Last updated: 2026-03-30 after Phase 1 Plan 03 complete*
