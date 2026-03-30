@@ -3,7 +3,6 @@ import traceback
 from contextlib import asynccontextmanager
 
 from starlette.middleware.cors import CORSMiddleware
-
 from bean.beans import RoleAudio, Role, Novel, get_db, NovelName
 from logger import init_logger, log, log_error, close_logger
 from fastapi import FastAPI, HTTPException, status, Query, UploadFile, WebSocket
@@ -26,13 +25,18 @@ from utils.common import split_novel_text_by_content_list
 from scheduler_tasks import (
     add_parse_job,
     add_generate_job,
+    add_multithread_generate_job,
+    add_watchdog_job,
     remove_job,
     get_all_jobs,
     get_parse_task_status,
     get_generate_task_status,
+    get_multithread_generate_task_status,
+    get_watchdog_task_status,
     start_scheduler,
     execute_parse_task,
     execute_generate_task,
+    execute_multithread_generate_task,
     set_server_instance,
     stop_scheduler,
     get_task_details,
@@ -563,27 +567,32 @@ def get_max_chapter_count(novel_name: str = Query(..., description="小说名称
 
 
 @app.post("/api/novels/batch-generate")
-async def batch_generate_novel(novel_name: str, chapter_count: int):
-    """批量生成小说音频
+async def batch_generate_novel(novel_name: str, chapter_count: int, thread_count: int = 2):
+    """批量生成小说音频 - 多线程队列模式
 
     参数：
     - novel_name: 小说名称
     - chapter_count: 生成的章节数
+    - thread_count: 线程数
 
     功能：
     1. 接收参数并打印
     2. 实时发送日志到前端
+    3. 使用多线程队列模式并发生成音频
     """
-    print("*" * 50)
-    log("*" * 50)
-    print("开始批量生成小说")
-    log("开始批量生成小说")
-    print(f"小说名称: {novel_name}")
-    log(f"小说名称: {novel_name}")
-    print(f"章节数: {chapter_count}")
-    log(f"章节数: {chapter_count}")
-    print("*" * 50)
-    log("*" * 50)
+    print("=" * 80)
+    print("🎯 批量生成任务开始")
+    print("=" * 80)
+    log("=" * 80)
+    log("🎯 批量生成任务开始")
+    print(f"📖 小说名称: {novel_name}")
+    log(f"📖 小说名称: {novel_name}")
+    print(f"📑 总章节数: {chapter_count}")
+    log(f"📑 总章节数: {chapter_count}")
+    print(f"🧵 线程数: {thread_count}")
+    log(f"🧵 线程数: {thread_count}")
+    print("=" * 80)
+    log("=" * 80)
 
     async def log_to_frontend(message):
         """将日志消息发送到WebSocket前端"""
@@ -594,70 +603,246 @@ async def batch_generate_novel(novel_name: str, chapter_count: int):
             log(f"发送日志到前端失败: {e}")
             log_error(f"发送日志到前端失败: {str(e)}")
 
-    # 修改这里：添加批量生成的逻辑
-    # 例如：
-    # - 根据小说名查询数据库
-    # - 获取需要生成的章节
-    # - 调用TTS生成音频
-    # - 更新数据库状态
-
-    print(f"开始生成任务...")
-    log(f"开始生成任务...")
-    await log_to_frontend(f"开始为小说 '{novel_name}' 生成 {chapter_count} 个章节的音频...")
-
-    # ============ 修改这里开始 ============
-    # 在这里添加你的生成逻辑
-    # 例如：
-
+    import queue
+    import asyncio
+    
+    await log_to_frontend("=" * 60)
+    await log_to_frontend("🎯 批量生成任务开始")
+    await log_to_frontend("=" * 60)
+    await log_to_frontend(f"📖 小说名称: {novel_name}")
+    await log_to_frontend(f"📑 总章节数: {chapter_count}")
+    await log_to_frontend(f"🧵 线程数: {thread_count}")
+    await log_to_frontend("=" * 60)
+    
     try:
-        # 1. 查询数据库获取小说信息
-        novels = Novel.select().where(Novel.novel_name == novel_name, Novel.current_state == 2).limit(chapter_count).limit(chapter_count)
-        # TODO 记得修改386行和392行的注释
-        load_role_list = []
+        print("🔍 查询数据库获取待生成的章节...")
+        log("🔍 查询数据库获取待生成的章节...")
+        await log_to_frontend("🔍 正在查询数据库...")
+        
+        novels = Novel.select().where(
+            Novel.novel_name == novel_name, 
+            Novel.current_state == 2
+        ).limit(chapter_count)
+        
+        novel_list = list(novels)
+        total_count = len(novel_list)
+        
+        print(f"📊 查询结果: 共 {total_count} 个待生成的章节")
+        log(f"📊 查询结果: 共 {total_count} 个待生成的章节")
+        await log_to_frontend(f"📊 查询结果: 共 {total_count} 个待生成的章节")
+        
+        if total_count == 0:
+            print("⚠️ 没有找到待生成的章节，任务结束")
+            log("⚠️ 没有找到待生成的章节，任务结束")
+            await log_to_frontend("⚠️ 没有找到待生成的章节，任务结束")
+            return {
+                "message": "没有找到待生成的章节",
+                "novel_name": novel_name,
+                "chapter_count": 0,
+                "status": "warning"
+            }
+        
+        print("🎭 正在加载角色音频列表...")
+        log("🎭 正在加载角色音频列表...")
+        await log_to_frontend("🎭 正在加载角色音频列表...")
+        
         load_role_list = await load_role_audio(novel_name, server)
-        for novel in novels:
-            chapter_parse_obj_list = parse_novel_data_bind_role_audio(novel.section_data_json,novel.after_analysis_data_json,novel.novel_name)
-            # print("*" * 80)
-            # print(chapter_parse_obj_list)
-            # print("*"*80)
-            # await generate_chapter_audio_test(chapter_parse_obj_list, load_role_list, novel_name, server)
-        #     TODO 这里需要修改
-            flag = await generate_chapter_audio(chapter_parse_obj_list,load_role_list,novel_name,novel.id,server)
-            if flag:
-               print(f"小说 {novel.novel_name} 章节 {novel.chapter_names} 生成完成，请去项目目录下的save文件夹下查看")
-               log(f"小说 {novel.novel_name} 章节 {novel.chapter_names} 生成完成，请去项目目录下的save文件夹下查看")
-               novel.current_state = 3
-               novel.save()
-            else:
-                print(f"小说 {novel.novel_name} 章节 {novel.chapter_names} 生成失败，请重试")
-                log(f"小说 {novel.novel_name} 章节 {novel.chapter_names} 生成失败，请重试")
+        print(f"🎭 角色音频列表加载完成，共 {len(load_role_list)} 个角色")
+        log(f"🎭 角色音频列表加载完成，共 {len(load_role_list)} 个角色")
+        await log_to_frontend(f"🎭 角色音频列表加载完成，共 {len(load_role_list)} 个角色")
+        
+        print("=" * 80)
+        print("🎬 开始多线程生成音频任务")
+        print(f"   📖 小说名: {novel_name}")
+        print(f"   📑 总章节数: {total_count}")
+        print(f"   🧵 线程数: {thread_count}")
+        print("=" * 80)
+        
+        await log_to_frontend("=" * 60)
+        await log_to_frontend("🎬 开始多线程生成音频任务")
+        await log_to_frontend(f"   📖 小说名: {novel_name}")
+        await log_to_frontend(f"   📑 总章节数: {total_count}")
+        await log_to_frontend(f"   🧵 线程数: {thread_count}")
+        await log_to_frontend("=" * 60)
+        
+        success_count = 0
+        fail_count = 0
+        completed_chapters = []
+        
+        task_queue = queue.Queue()
+        for idx, novel in enumerate(novel_list, 1):
+            task_queue.put({
+                "novel": novel,
+                "index": idx,
+                "total": total_count
+            })
+        
+        print(f"📋 任务队列初始化完成: {task_queue.qsize()} 个任务进入队列")
+        log(f"📋 任务队列初始化完成: {task_queue.qsize()} 个任务进入队列")
+        await log_to_frontend(f"📋 任务队列初始化完成: {task_queue.qsize()} 个任务进入队列")
+        await log_to_frontend(f"🧵 初始状态: {min(thread_count, total_count)} 个线程开始执行，其余 {max(0, total_count - thread_count)} 个任务等待")
+        
+        async def execute_single_chapter_batch(thread_id, novel_data):
+            """执行单个章节的音频生成"""
+            nonlocal success_count, fail_count
+            
+            novel = novel_data["novel"]
+            chapter_index = novel_data["index"]
+            total_chapters = novel_data["total"]
+            
+            chapter_name = novel.chapter_names if novel.chapter_names else f"章节{novel.id}"
+            
+            print(f"[线程-{thread_id}] 📋 领取任务: 第 {chapter_index}/{total_chapters} 章 - {chapter_name}")
+            log(f"[线程-{thread_id}] 📋 领取任务: 第 {chapter_index}/{total_chapters} 章 - {chapter_name}")
+            await log_to_frontend(f"[线程-{thread_id}] 📋 领取任务: 第 {chapter_index}/{total_chapters} 章 - {chapter_name}")
+            
+            try:
+                print(f"[线程-{thread_id}] ⏳ 开始处理: 第 {chapter_index}/{total_chapters} 章 - {chapter_name}")
+                log(f"[线程-{thread_id}] ⏳ 开始处理: 第 {chapter_index}/{total_chapters} 章 - {chapter_name}")
+                await log_to_frontend(f"[线程-{thread_id}] ⏳ 开始处理: 第 {chapter_index}/{total_chapters} 章 - {chapter_name}")
+                
+                chapter_parse_obj_list = parse_novel_data_bind_role_audio(
+                    novel.section_data_json,
+                    novel.after_analysis_data_json,
+                    novel.novel_name
+                )
+                
+                print(f"[线程-{thread_id}] 🔊 正在生成音频: 第 {chapter_index}/{total_chapters} 章 - {chapter_name}")
+                log(f"[线程-{thread_id}] 🔊 正在生成音频: 第 {chapter_index}/{total_chapters} 章 - {chapter_name}")
+                await log_to_frontend(f"[线程-{thread_id}] 🔊 正在生成音频: 第 {chapter_index}/{total_chapters} 章 - {chapter_name}")
+                
+                flag = await generate_chapter_audio(
+                    chapter_parse_obj_list,
+                    load_role_list,
+                    novel_name,
+                    novel.id,
+                    server
+                )
+                
+                if flag:
+                    print(f"[线程-{thread_id}] ✅ 完成: 第 {chapter_index}/{total_chapters} 章 - {chapter_name}")
+                    log(f"[线程-{thread_id}] ✅ 完成: 第 {chapter_index}/{total_chapters} 章 - {chapter_name}")
+                    await log_to_frontend(f"[线程-{thread_id}] ✅ 完成: 第 {chapter_index}/{total_chapters} 章 - {chapter_name}")
+                    
+                    novel.current_state = 3
+                    novel.save()
+                    return {
+                        "success": True, 
+                        "chapter_index": chapter_index,
+                        "chapter": chapter_name, 
+                        "novel_id": novel.id,
+                        "thread_id": thread_id
+                    }
+                else:
+                    print(f"[线程-{thread_id}] ❌ 失败: 第 {chapter_index}/{total_chapters} 章 - {chapter_name}")
+                    log(f"[线程-{thread_id}] ❌ 失败: 第 {chapter_index}/{total_chapters} 章 - {chapter_name}")
+                    await log_to_frontend(f"[线程-{thread_id}] ❌ 失败: 第 {chapter_index}/{total_chapters} 章 - {chapter_name}")
+                    return {
+                        "success": False, 
+                        "chapter_index": chapter_index,
+                        "chapter": chapter_name, 
+                        "novel_id": novel.id,
+                        "thread_id": thread_id
+                    }
+            except Exception as e:
+                print(f"[线程-{thread_id}] ❌ 出错: 第 {chapter_index}/{total_chapters} 章 - {chapter_name}, 错误: {e}")
+                log(f"[线程-{thread_id}] ❌ 出错: 第 {chapter_index}/{total_chapters} 章 - {chapter_name}, 错误: {e}")
+                log_error(f"[线程-{thread_id}] ❌ 出错: {str(e)}")
+                await log_to_frontend(f"[线程-{thread_id}] ❌ 出错: 第 {chapter_index}/{total_chapters} 章 - {chapter_name}, 错误: {e}")
+                return {
+                    "success": False, 
+                    "chapter_index": chapter_index,
+                    "chapter": chapter_name, 
+                    "error": str(e),
+                    "thread_id": thread_id
+                }
+        
+        async def worker_task(thread_id):
+            """工作线程任务：从队列获取任务并执行"""
+            nonlocal success_count, fail_count
+            
+            print(f"[线程-{thread_id}] 🟢 启动工作线程-{thread_id}")
+            log(f"[线程-{thread_id}] 🟢 启动工作线程-{thread_id}")
+            await log_to_frontend(f"[线程-{thread_id}] 🟢 启动工作线程-{thread_id}")
+            
+            while True:
+                try:
+                    task_data = task_queue.get_nowait()
+                except queue.Empty:
+                    print(f"[线程-{thread_id}] 🔚 队列为空，线程退出")
+                    log(f"[线程-{thread_id}] 🔚 队列为空，线程退出")
+                    await log_to_frontend(f"[线程-{thread_id}] 🔚 队列为空，线程退出")
+                    break
+                
+                result = await execute_single_chapter_batch(thread_id, task_data)
+                
+                completed_chapters.append(result)
+                if result["success"]:
+                    success_count += 1
+                else:
+                    fail_count += 1
+                
+                task_queue.task_done()
+                
+                progress = f"进度: {len(completed_chapters)}/{total_count} ({len(completed_chapters)*100//total_count}%)"
+                remaining = task_queue.qsize()
+                print(f"📈 任务进度更新: {progress}, 剩余待执行: {remaining} 个任务")
+                log(f"📈 任务进度更新: {progress}, 剩余待执行: {remaining} 个任务")
+                await log_to_frontend(f"📈 任务进度更新: {progress}, 剩余待执行: {remaining} 个任务")
+        
+        tasks = []
+        for i in range(thread_count):
+            tasks.append(worker_task(i + 1))
+        
+        await asyncio.gather(*tasks)
+        
+        print("=" * 80)
+        print("🏁 所有工作线程执行完成")
+        print("📊 执行结果统计:")
+        print(f"   ✅ 成功: {success_count} 个章节")
+        print(f"   ❌ 失败: {fail_count} 个章节")
+        print(f"   📈 总计: {success_count + fail_count} 个章节")
+        print("=" * 80)
+        
+        log("=" * 80)
+        log("🏁 所有工作线程执行完成")
+        log("📊 执行结果统计:")
+        log(f"   ✅ 成功: {success_count} 个章节")
+        log(f"   ❌ 失败: {fail_count} 个章节")
+        log(f"   📈 总计: {success_count + fail_count} 个章节")
+        log("=" * 80)
+        
+        await log_to_frontend("=" * 60)
+        await log_to_frontend("🏁 所有工作线程执行完成")
+        await log_to_frontend("📊 执行结果统计:")
+        await log_to_frontend(f"   ✅ 成功: {success_count} 个章节")
+        await log_to_frontend(f"   ❌ 失败: {fail_count} 个章节")
+        await log_to_frontend(f"   📈 总计: {success_count + fail_count} 个章节")
+        await log_to_frontend("=" * 60)
+        
+        print("🎉 批量生成任务完成")
+        log("🎉 批量生成任务完成")
+        await log_to_frontend("🎉 批量生成任务完成！")
+        
+        return {
+            "message": "批量生成任务已完成",
+            "novel_name": novel_name,
+            "chapter_count": total_count,
+            "success_count": success_count,
+            "fail_count": fail_count,
+            "status": "success"
+        }
+        
     except Exception as e:
-        print(f"批量生成小说时出错: {str(e)}")
-        log(f"批量生成小说时出错: {str(e)}")
-        log_error(f"批量生成小说时出错: {str(e)}")
+        print(f"❌ 批量生成小说时出错: {str(e)}")
+        log(f"❌ 批量生成小说时出错: {str(e)}")
+        log_error(f"❌ 批量生成小说时出错: {str(e)}")
+        await log_to_frontend(f"❌ 批量生成小说时出错: {str(e)}")
         traceback.print_exc()
-
-
-            #
-    # 2. 遍历章节生成音频
-    # for i, novel in enumerate(novels[:chapter_count]):
-    #     await log_to_frontend(f"正在生成第 {i+1}/{chapter_count} 个章节...")
-    #     # 调用音频生成逻辑
-    #     await generate_audio_for_chapter(novel)
-    #
-    # 3. 更新数据库状态
-    # ============ 修改这里结束 ============
-
-    await log_to_frontend("所有章节音频生成完成！")
-    print("批量生成完成")
-    log("批量生成完成")
-
-    return {
-        "message": "批量生成任务已完成",
-        "novel_name": novel_name,
-        "chapter_count": chapter_count,
-        "status": "success"
-    }
+        return {
+            "message": f"批量生成失败: {str(e)}",
+            "status": "error"
+        }
 
 
 # ============ Role CRUD API ============
@@ -819,6 +1004,54 @@ def get_novel_names(
 def get_novel_name(novel_name_id: int):
     """获取单个小说名"""
     return get_novel_name_or_404(novel_name_id)
+
+
+@app.get("/api/novel/chapter-stats")
+def get_novel_chapter_stats():
+    """获取小说章节统计数据
+
+    返回每个小说的：
+    - 小说名
+    - 数据库储存的章节数 = 按创建时间降序的第一条小说id - 按创建时间升序的第一条小说id + 1
+    - 最后一章的章节名 = 按创建时间降序的第一条小说的chapter_names
+    """
+    try:
+        stats = []
+        
+        novel_names = NovelName.select()
+        
+        for name_obj in novel_names:
+            novel_name = name_obj.novel_name
+            
+            novels = Novel.select().where(Novel.novel_name == novel_name)
+            
+            if novels.count() == 0:
+                continue
+            
+            first_novel = novels.order_by(Novel.create_time.asc()).first()
+            last_novel = novels.order_by(Novel.create_time.desc()).first()
+            
+            if first_novel and last_novel:
+                stored_chapter_count = last_novel.id - first_novel.id + 1
+                last_chapter_name = last_novel.chapter_names if last_novel.chapter_names else "无"
+                
+                stats.append({
+                    "novel_name": novel_name,
+                    "stored_chapter_count": stored_chapter_count,
+                    "last_chapter_name": last_chapter_name
+                })
+        
+        return {
+            "status": "success",
+            "data": stats
+        }
+    except Exception as e:
+        log_error(f"获取小说章节统计数据失败: {str(e)}")
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"获取小说章节统计数据失败: {str(e)}"
+        )
 
 
 @app.put("/api/novel-names/{novel_name_id}", response_model=NovelNameResponse)
@@ -1065,6 +1298,45 @@ def get_roles_summary():
     }
 
 
+@app.get("/api/stats/overview")
+def get_stats_overview():
+    """获取全局统计概览"""
+    total_novels = Novel.select().count()
+    total_roles = Role.select().count()
+    total_audios = RoleAudio.select().count()
+
+    # Calculate total chapters: sum of (comma count + 1) for each novel
+    novels = Novel.select()
+    total_chapters = sum(
+        (novel.chapter_names.count(',') + 1) if novel.chapter_names else 0
+        for novel in novels
+    )
+
+    return {
+        "total_novels": total_novels,
+        "total_chapters": total_chapters,
+        "total_roles": total_roles,
+        "total_audios": total_audios
+    }
+
+
+@app.get("/api/stats/pending")
+def get_stats_pending():
+    """获取待处理统计"""
+    # Count novels that haven't been parsed yet (state = 1)
+    unparsed_novels = Novel.select().where(Novel.current_state == 1).count()
+
+    # Count chapters not yet synthesized: novels in state 1 or 2
+    ungenerated_chapters = Novel.select().where(
+        (Novel.current_state == 1) | (Novel.current_state == 2)
+    ).count()
+
+    return {
+        "unparsed_novels": unparsed_novels,
+        "ungenerated_chapters": ungenerated_chapters
+    }
+
+
 @app.get("/api/novels/{novel_id}/roles")
 def get_novel_roles(novel_id: int):
     """获取指定小说的所有角色"""
@@ -1191,8 +1463,10 @@ def upload_novels_batch(files: List[UploadFile]):
 
     接收多个txt文件，循环打印文件名和内容
     此处添加后续处理逻辑
+    检查每个小说名是否已存在于数据库中
     """
     results = []
+    existed_novels = []
 
     for file in files:
         try:
@@ -1214,6 +1488,25 @@ def upload_novels_batch(files: List[UploadFile]):
             # 按行分割
             content_list = text_content.split('\n')
 
+            # 提取小说名（去掉.txt扩展名）
+            novel_name = filename.replace(".txt", "")
+
+            # 检查小说名是否已存在于数据库
+            existing_novel = NovelName.get_or_none(NovelName.novel_name == novel_name)
+
+            if existing_novel:
+                # 小说名已存在，跳过处理
+                print(f"⚠️ 跳过文件 {filename}: 小说名 '{novel_name}' 已存在于数据库")
+                log(f"⚠️ 跳过文件 {filename}: 小说名 '{novel_name}' 已存在于数据库")
+                existed_novels.append(novel_name)
+                results.append({
+                    "filename": filename,
+                    "novel_name": novel_name,
+                    "content_length": len(text_content),
+                    "status": "existed"
+                })
+                continue
+
             # 打印文件名和内容信息
             print(f"文件名: {filename}")
             log(f"文件名: {filename}")
@@ -1222,14 +1515,12 @@ def upload_novels_batch(files: List[UploadFile]):
             print("-" * 50)
             log("-" * 50)
 
-            # 提取小说名（去掉.txt扩展名）
-            novel_name = filename.replace(".txt", "")
-
             # 调用split_novel_text_by_content_list函数处理上传的文件
             split_novel_text_by_content_list(content_list, novel_name)
 
             results.append({
                 "filename": filename,
+                "novel_name": novel_name,
                 "content_length": len(text_content),
                 "status": "success"
             })
@@ -1244,8 +1535,26 @@ def upload_novels_batch(files: List[UploadFile]):
                 "error": str(e)
             })
 
+    # 统计处理结果
+    success_count = sum(1 for r in results if r["status"] == "success")
+    existed_count = len(existed_novels)
+    error_count = sum(1 for r in results if r["status"] == "error")
+
+    message = f"成功上传 {success_count} 个文件"
+    if existed_count > 0:
+        message += f"，跳过 {existed_count} 个已存在的小说"
+    if error_count > 0:
+        message += f"，{error_count} 个文件处理失败"
+
+    print(message)
+    log(message)
+
     return {
-        "message": f"成功接收 {len(files)} 个文件",
+        "message": message,
+        "success_count": success_count,
+        "existed_count": existed_count,
+        "existed_novels": existed_novels,
+        "error_count": error_count,
         "files": results
     }
 
@@ -1501,6 +1810,13 @@ class ScheduledGenerateJob(BaseModel):
     novel_name: str
     chapter_count: int
 
+class ScheduledMultithreadGenerateJob(BaseModel):
+    job_id: str
+    cron: str
+    novel_name: str
+    chapter_count: int
+    thread_count: int
+
 @app.post("/api/scheduled-tasks/parse")
 async def create_scheduled_parse_job(job: ScheduledParseJob):
     """创建定时解析任务"""
@@ -1556,6 +1872,75 @@ async def create_scheduled_generate_job(job: ScheduledGenerateJob):
             }
     except Exception as e:
         log_error(f"创建定时生成任务失败: {str(e)}")
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"创建定时任务失败: {str(e)}"
+        )
+
+@app.post("/api/scheduled-tasks/multithread-generate")
+async def create_scheduled_multithread_generate_job(job: ScheduledMultithreadGenerateJob):
+    """创建定时多线程生成音频任务"""
+    try:
+        success = add_multithread_generate_job(
+            job_id=job.job_id,
+            cron=job.cron,
+            novel_name=job.novel_name,
+            chapter_count=job.chapter_count,
+            thread_count=job.thread_count
+        )
+
+        if success:
+            return {
+                "message": "定时多线程生成音频任务创建成功",
+                "job_id": job.job_id,
+                "status": "success"
+            }
+        else:
+            return {
+                "message": "定时多线程生成音频任务创建失败",
+                "status": "failed"
+            }
+    except Exception as e:
+        log_error(f"创建定时多线程生成音频任务失败: {str(e)}")
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"创建定时任务失败: {str(e)}"
+        )
+
+class ScheduledWatchdogJob(BaseModel):
+    job_id: str
+    cron: str
+    novel_name: str
+    chapter_count: int
+    thread_count: int
+
+@app.post("/api/scheduled-tasks/watchdog")
+async def create_scheduled_watchdog_job(job: ScheduledWatchdogJob):
+    """创建看门狗任务"""
+    try:
+        success = add_watchdog_job(
+            job_id=job.job_id,
+            cron=job.cron,
+            novel_name=job.novel_name,
+            chapter_count=job.chapter_count,
+            thread_count=job.thread_count
+        )
+
+        if success:
+            return {
+                "message": "看门狗任务创建成功",
+                "job_id": job.job_id,
+                "status": "success"
+            }
+        else:
+            return {
+                "message": "看门狗任务创建失败",
+                "status": "failed"
+            }
+    except Exception as e:
+        log_error(f"创建看门狗任务失败: {str(e)}")
         traceback.print_exc()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -1626,6 +2011,34 @@ async def get_generate_task_running_status():
         return status
     except Exception as e:
         log_error(f"获取生成任务状态失败: {str(e)}")
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"获取任务状态失败: {str(e)}"
+        )
+
+@app.get("/api/scheduled-tasks/status/multithread-generate")
+async def get_multithread_generate_task_running_status():
+    """获取多线程生成任务运行状态"""
+    try:
+        status = get_multithread_generate_task_status()
+        return status
+    except Exception as e:
+        log_error(f"获取多线程生成任务状态失败: {str(e)}")
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"获取任务状态失败: {str(e)}"
+        )
+
+@app.get("/api/scheduled-tasks/status/watchdog")
+async def get_watchdog_task_running_status():
+    """获取看门狗任务运行状态"""
+    try:
+        status = get_watchdog_task_status()
+        return status
+    except Exception as e:
+        log_error(f"获取看门狗任务状态失败: {str(e)}")
         traceback.print_exc()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
