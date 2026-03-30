@@ -26,3 +26,4 @@ See: .planning/PROJECT.md (updated 2026-03-30)
 - **2026-03-30**: Phase 1 context gathered — 卡片网格布局、Element Plus charts、4 个 API 端点
 - **2026-03-30**: Phase 1 planned — 3 plans (2 waves), verification passed
 - **2026-03-30**: Phase 1 Plan 01 completed — Backend API endpoints /api/stats/overview and /api/stats/pending added
+- **2026-03-30**: Phase 1 Plan 02 completed — Backend API endpoints /api/stats/novels and /api/stats/roles/top added with frontend bindings
