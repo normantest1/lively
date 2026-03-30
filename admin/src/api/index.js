@@ -72,13 +72,18 @@ export default {
       params: { novel_name: novelName }
     }).then(res => res.data)
   },
-  batchGenerateNovel(novelName, chapterCount) {
+  batchGenerateNovel(novelName, chapterCount, threadCount = 2) {
     return apiClient.post('/novels/batch-generate', null, {
       params: {
         novel_name: novelName,
-        chapter_count: chapterCount
+        chapter_count: chapterCount,
+        thread_count: threadCount
       }
     }).then(res => res.data)
+  },
+  
+  getNovelChapterStats() {
+    return apiClient.get('/novel/chapter-stats').then(res => res.data)
   },
 
   // Role APIs
@@ -150,6 +155,12 @@ export default {
   getRolesSummary() {
     return apiClient.get('/statistics/roles-summary').then(res => res.data)
   },
+  getStatsOverview() {
+    return apiClient.get('/stats/overview').then(res => res.data)
+  },
+  getStatsPending() {
+    return apiClient.get('/stats/pending').then(res => res.data)
+  },
 
   // Settings APIs
   getSettings() {
@@ -169,6 +180,9 @@ export default {
   createScheduledGenerateTask(data) {
     return apiClient.post('/scheduled-tasks/generate', data).then(res => res.data)
   },
+  createScheduledMultithreadGenerateTask(data) {
+    return apiClient.post('/scheduled-tasks/multithread-generate', data).then(res => res.data)
+  },
   deleteScheduledTask(jobId) {
     return apiClient.delete(`/scheduled-tasks/${jobId}`).then(res => res.data)
   },
@@ -177,6 +191,15 @@ export default {
   },
   getGenerateTaskStatus() {
     return apiClient.get('/scheduled-tasks/status/generate').then(res => res.data)
+  },
+  getMultithreadGenerateTaskStatus() {
+    return apiClient.get('/scheduled-tasks/status/multithread-generate').then(res => res.data)
+  },
+  createScheduledWatchdogTask(data) {
+    return apiClient.post('/scheduled-tasks/watchdog', data).then(res => res.data)
+  },
+  getWatchdogTaskStatus() {
+    return apiClient.get('/scheduled-tasks/status/watchdog').then(res => res.data)
   },
   getScheduledTasksDetails() {
     return apiClient.get('/scheduled-tasks/details').then(res => res.data)
