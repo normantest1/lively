@@ -9,7 +9,13 @@ import ScheduledTaskView from '@/views/ScheduledTaskView.vue'
 const routes = [
   {
     path: '/',
-    redirect: '/novels'
+    redirect: '/dashboard'
+  },
+  {
+    path: '/dashboard',
+    name: 'DashboardView',
+    component: () => import('@/views/DashboardView.vue'),
+    meta: { title: '统计仪表盘' }
   },
   {
     path: '/novels',
