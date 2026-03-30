@@ -1312,9 +1312,11 @@ def get_stats_overview():
         for novel in novels
     )
 
+    avg_chapters = total_chapters / total_novels if total_novels > 0 else 0
     return {
         "total_novels": total_novels,
         "total_chapters": total_chapters,
+        "avg_chapters_per_novel": round(avg_chapters, 2),
         "total_roles": total_roles,
         "total_audios": total_audios
     }
