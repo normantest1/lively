@@ -10,6 +10,9 @@
           router
           class="el-menu-vertical"
         >
+          <el-menu-item index="/dashboard">
+            <span>统计仪表盘</span>
+          </el-menu-item>
           <el-menu-item index="/novels">
             <span>小说管理</span>
           </el-menu-item>
