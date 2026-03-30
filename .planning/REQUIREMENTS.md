@@ -26,13 +26,13 @@
 **描述:** 创建后端 API 端点为仪表盘提供数据
 
 **端点要求:**
-- [ ] `GET /api/stats/overview` — 返回全局统计概览
+- [x] `GET /api/stats/overview` — 返回全局统计概览
   - 小说总数、章节总数、角色总数、音频总数
-- [ ] `GET /api/stats/novels` — 返回小说统计
+- [x] `GET /api/stats/novels` — 返回小说统计
   - 每本小说的章节数、角色数、解析状态、生成状态
-- [ ] `GET /api/stats/roles/top` — 返回热门角色
+- [x] `GET /api/stats/roles/top` — 返回热门角色
   - 前 50 个角色，按引用次数排序
-- [ ] `GET /api/stats/pending` — 返回待处理统计
+- [x] `GET /api/stats/pending` — 返回待处理统计
   - 未解析小说数、未生成章节数
 
 **验收标准:**

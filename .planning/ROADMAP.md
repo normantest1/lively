@@ -23,7 +23,7 @@
 
 **Plan list:**
 - [x] 01-01-PLAN.md — Backend API: overview + pending endpoints
-- [ ] 01-02-PLAN.md — Backend API: novels + top roles endpoints
+- [x] 01-02-PLAN.md — Backend API: novels + top roles endpoints
 - [ ] 01-03-PLAN.md — Frontend: DashboardView component
 
 **UI hint:** yes
@@ -41,7 +41,7 @@
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | UI-STATS-01 | Phase 1 | Pending |
-| UI-STATS-02 | Phase 1 | Pending |
+| UI-STATS-02 | Phase 1 | Complete |
 
 **Coverage:**
 - v1 requirements: 2 total
