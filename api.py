@@ -1337,6 +1337,68 @@ def get_stats_pending():
     }
 
 
+@app.get("/api/stats/novels")
+def get_stats_novels():
+    """获取每本小说的统计信息"""
+    try:
+        novels = Novel.select()
+        result = []
+        state_name_map = {1: "已分片待解析", 2: "已解析待合成", 3: "已合成语音"}
+
+        for novel in novels:
+            # 计算章节数：按逗号分隔 chapter_names
+            chapter_count = 0
+            if novel.chapter_names:
+                chapter_count = len([ch for ch in novel.chapter_names.split(',') if ch.strip()])
+
+            # 计算角色数：该小说名下的角色总数
+            role_count = Role.select().where(Role.novel_name == novel.novel_name).count()
+
+            result.append({
+                "id": novel.id,
+                "novel_name": novel.novel_name,
+                "chapter_count": chapter_count,
+                "role_count": role_count,
+                "current_state": novel.current_state,
+                "state_name": state_name_map.get(novel.current_state, "未知")
+            })
+
+        return {"novels": result}
+    except Exception as e:
+        log_error(f"获取小说统计失败: {str(e)}")
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"获取小说统计失败: {str(e)}"
+        )
+
+
+@app.get("/api/stats/roles/top")
+def get_stats_top_roles(limit: int = Query(50, ge=1, le=100, description="返回的角色数量")):
+    """获取热门角色列表，按引用次数降序排序"""
+    try:
+        roles = Role.select().order_by(Role.role_count.desc()).limit(limit)
+        result = []
+        for role in roles:
+            result.append({
+                "id": role.id,
+                "role_name": role.role_name,
+                "novel_name": role.novel_name,
+                "role_count": role.role_count,
+                "gender": role.gender,
+                "is_bind": role.is_bind,
+                "presence_rate": role.presence_rate
+            })
+        return {"roles": result}
+    except Exception as e:
+        log_error(f"获取热门角色失败: {str(e)}")
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"获取热门角色失败: {str(e)}"
+        )
+
+
 @app.get("/api/novels/{novel_id}/roles")
 def get_novel_roles(novel_id: int):
     """获取指定小说的所有角色"""
