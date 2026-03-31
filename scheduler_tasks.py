@@ -683,6 +683,15 @@ async def execute_single_chapter_from_queue(thread_id, novel_data, load_role_lis
             
             novel.current_state = 3
             novel.save()
+
+            # 更新已完成章节计数
+            if 'completed_chapters' in batch_generate_state:
+                batch_generate_state['completed_chapters'] += 1
+                remaining = batch_generate_state['total_chapters'] - batch_generate_state['completed_chapters']
+                log_info(f"📊 任务进度: {batch_generate_state['completed_chapters']}/{batch_generate_state['total_chapters']} 完成，剩余 {remaining}")
+                if log_callback:
+                    await log_callback(f"[进度] {batch_generate_state['completed_chapters']}/{batch_generate_state['total_chapters']} 完成，剩余 {remaining}\n")
+
             return {
                 "success": True, 
                 "chapter_index": chapter_index,
@@ -898,6 +907,20 @@ async def execute_multithread_generate_task(job_id: str, novel_name: str, chapte
         if multithread_generate_cancel_event and multithread_generate_cancel_event.is_set():
             log_warning(f"⚠️ 任务 {job_id} 在队列初始化后被取消")
             return False
+
+        # 检查是否需要暂停
+        if batch_generate_state.get('is_paused') or batch_generate_state.get('is_stopping'):
+            log_info(f"⏸️ 任务已暂停，等待恢复...")
+            if log_callback:
+                await log_callback(f"[任务] ⏸️ 任务已暂停，等待恢复...\n")
+
+            # 等待暂停标志清除
+            while batch_generate_state.get('is_paused') or batch_generate_state.get('is_stopping'):
+                await asyncio.sleep(5)
+
+            log_info(f"▶️ 任务恢复执行")
+            if log_callback:
+                await log_callback(f"[任务] ▶️ 任务恢复执行\n")
 
         loop = asyncio.get_event_loop()
         
