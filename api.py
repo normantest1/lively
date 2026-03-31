@@ -168,6 +168,56 @@ class RoleAudioResponse(RoleAudioBase):
     model_config = ConfigDict(from_attributes=True)
 server = ""
 
+# ============ 看门狗启动恢复功能 ============
+def cleanup_temp_wavs():
+    """清理temp目录下的wav文件"""
+    temp_dir = Path(__file__).resolve().parent / "temp"
+    if temp_dir.exists():
+        for wav_file in temp_dir.glob("*.wav"):
+            try:
+                wav_file.unlink()
+                log(f"清理临时音频文件: {wav_file.name}")
+            except Exception as e:
+                log_error(f"清理临时文件失败: {e}")
+
+async def restore_watchdog_tasks():
+    """恢复看门狗任务"""
+    from bean import beans
+    WatchdogTask = beans.WatchdogTask
+
+    config_path = Path(__file__).resolve().parent / "config/lively_config.json"
+    auto_recovery = load_config(config_path, "watchdog_auto_recovery")
+
+    if auto_recovery is None:
+        auto_recovery = True  # 默认开启
+
+    if not auto_recovery:
+        # 关闭自动恢复时，删除所有任务记录
+        db = get_db()
+        with db.atomic():
+            deleted = WatchdogTask.delete().execute()
+        log(f"已删除 {deleted} 条看门狗任务记录（自动恢复已关闭）")
+        # 发送WebSocket通知
+        await manager.send_message(json.dumps({
+            "type": "watchdog_recovery",
+            "message": f"已清理 {deleted} 条看门狗任务记录",
+            "duration": 5
+        }))
+        return
+
+    # 读取所有未完成的任务
+    db = get_db()
+    running_tasks = WatchdogTask.select().where(WatchdogTask.is_running == True)
+    for task in running_tasks:
+        msg = f"恢复看门狗任务: {task.novel_name}, 线程: {task.thread_count}, 进度: {task.completed_chapters}/{task.total_chapters}"
+        log(msg)
+        # 发送WebSocket通知
+        await manager.send_message(json.dumps({
+            "type": "watchdog_recovery",
+            "message": msg,
+            "duration": 5
+        }))
+
 # ============ FastAPI 应用 ============
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -203,6 +253,11 @@ async def lifespan(app: FastAPI):
 
     set_server_instance(server)
     start_scheduler()
+
+    # 启动时清理temp目录
+    cleanup_temp_wavs()
+    # 启动时恢复看门狗任务
+    asyncio.create_task(restore_watchdog_tasks())
 
     yield
 
