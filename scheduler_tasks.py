@@ -9,7 +9,7 @@ from pathlib import Path
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 from apscheduler.jobstores.memory import MemoryJobStore
-from bean.beans import Novel, ScheduledTask, get_db
+from bean.beans import Novel, ScheduledTask, WatchdogTask, get_db
 from nanovllm_voxcpm import VoxCPM
 from parse_text import async_parse_text, parse_novel_data_bind_role_audio
 from generate_audio import load_role_audio, generate_chapter_audio
@@ -696,6 +696,17 @@ async def execute_single_chapter_from_queue(thread_id, novel_data, load_role_lis
                 if log_callback:
                     await log_callback(f"[进度] {batch_generate_state['completed_chapters']}/{batch_generate_state['total_chapters']} 完成，剩余 {remaining}\n")
 
+                # 更新看门狗任务记录
+                try:
+                    db = get_db()
+                    with db.atomic():
+                        WatchdogTask.update(
+                            completed_chapters=batch_generate_state['completed_chapters'],
+                            update_time=datetime.datetime.now()
+                        ).where(WatchdogTask.job_id == task_job_id).execute()
+                except Exception as e:
+                    log_error(f"更新看门狗任务记录失败: {e}")
+
             return {
                 "success": True, 
                 "chapter_index": chapter_index,
@@ -1166,6 +1177,26 @@ async def execute_watchdog_task(job_id: str, novel_name: str = '', chapter_count
         if log_callback:
             await log_callback(f"[看门狗任务] 🐕 看门狗任务开始执行...\n")
 
+        # 创建看门狗任务记录到数据库
+        if novel_name and chapter_count > 0:
+            try:
+                db = get_db()
+                with db.atomic():
+                    # 删除旧的任务记录（如果存在）
+                    WatchdogTask.delete().where(WatchdogTask.job_id == job_id).execute()
+                    # 创建新记录
+                    WatchdogTask.create(
+                        job_id=job_id,
+                        novel_name=novel_name,
+                        thread_count=thread_count,
+                        total_chapters=chapter_count,
+                        completed_chapters=0,
+                        is_running=True
+                    )
+                log_info(f"🐕 已创建看门狗任务记录: job_id={job_id}, novel_name={novel_name}, total_chapters={chapter_count}")
+            except Exception as e:
+                log_error(f"创建看门狗任务记录失败: {e}")
+
         if novel_name and chapter_count > 0:
             log_info(f"🐕 开始执行多线程生成音频任务...")
             if log_callback:
@@ -1220,6 +1251,17 @@ async def execute_watchdog_task(job_id: str, novel_name: str = '', chapter_count
             watchdog_task_running = False
             watchdog_current_job_id = None
             watchdog_cancel_event = None
+        # 更新看门狗任务记录为非运行状态
+        try:
+            db = get_db()
+            with db.atomic():
+                WatchdogTask.update(
+                    is_running=False,
+                    update_time=datetime.datetime.now()
+                ).where(WatchdogTask.job_id == job_id).execute()
+            log_info(f"🐕 已更新看门狗任务记录为完成状态: job_id={job_id}")
+        except Exception as e:
+            log_error(f"更新看门狗任务记录失败: {e}")
         log_info(f"🏃 看门狗任务执行器退出，任务ID: {job_id}")
 
 async def check_rtf_in_logs(log_callback=None) -> bool:
