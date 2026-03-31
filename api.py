@@ -1793,6 +1793,11 @@ class SettingsRequest(BaseModel):
     max_token: Optional[int] = None
     preload_role_count: Optional[int] = None
     bind_audio_presence_rate: Optional[float] = None
+    rtf_threshold: Optional[float] = None
+    watchdog_auto_recovery: Optional[bool] = None
+    watchdog_reload_wait_seconds: Optional[int] = None
+    watchdog_resume_wait_seconds: Optional[int] = None
+    watchdog_log_check_lines: Optional[int] = None
 
 
 def get_default_settings() -> dict:
@@ -1805,7 +1810,12 @@ def get_default_settings() -> dict:
         "model_name": "gpt-3.5-turbo",
         "max_token": 2000,
         "preload_role_count": 5,
-        "bind_audio_presence_rate": 0.4
+        "bind_audio_presence_rate": 0.4,
+        "rtf_threshold": 0.8,
+        "watchdog_auto_recovery": True,
+        "watchdog_reload_wait_seconds": 60,
+        "watchdog_resume_wait_seconds": 120,
+        "watchdog_log_check_lines": 10
     }
 
 
