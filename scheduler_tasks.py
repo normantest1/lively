@@ -1183,8 +1183,31 @@ async def execute_watchdog_task(job_id: str, novel_name: str = '', chapter_count
         if log_callback:
             await log_callback(f"[看门狗任务] 🐕 看门狗任务开始执行...\n")
 
+        # 检查是否需要恢复任务（数据库中已有 is_running=True 的记录）
+        recovery_mode = False
+        existing_completed = 0
+        remaining_chapters = chapter_count
+        if novel_name and chapter_count > 0:
+            try:
+                db = get_db()
+                existing_task = WatchdogTask.select().where(
+                    (WatchdogTask.job_id == job_id) &
+                    (WatchdogTask.is_running == True)
+                ).first()
+
+                if existing_task:
+                    # 数据库中有恢复记录，使用恢复模式
+                    recovery_mode = True
+                    existing_completed = existing_task.completed_chapters
+                    remaining_chapters = existing_task.total_chapters - existing_task.completed_chapters
+                    log_info(f"🔄 发现恢复记录: job_id={job_id}, 已完成 {existing_completed} 章，剩余 {remaining_chapters} 章")
+                    if log_callback:
+                        await log_callback(f"[看门狗任务] 🔄 恢复任务: 已完成 {existing_completed} 章，剩余 {remaining_chapters} 章\n")
+            except Exception as e:
+                log_error(f"查询恢复记录失败: {e}")
+
         # 创建看门狗任务记录到数据库
-        if novel_name and chapter_count > 0 and not is_recovery:
+        if novel_name and chapter_count > 0 and not is_recovery and not recovery_mode:
             # 只有在新任务时才创建记录，恢复任务时跳过
             try:
                 db = get_db()
@@ -1209,10 +1232,13 @@ async def execute_watchdog_task(job_id: str, novel_name: str = '', chapter_count
             if log_callback:
                 await log_callback(f"[看门狗任务] 🐕 开始执行多线程生成音频任务...\n")
 
+            # 确定执行参数：恢复模式用剩余章节数，否则用原始章节数
+            actual_chapter_count = remaining_chapters if recovery_mode else chapter_count
+
             await execute_multithread_generate_task(
                 job_id=job_id,
                 novel_name=novel_name,
-                chapter_count=chapter_count,
+                chapter_count=actual_chapter_count,
                 thread_count=thread_count,
                 log_callback=log_callback,
                 existing_completed=existing_completed  # 恢复时传递已完成的章节数
