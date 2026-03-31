@@ -1150,7 +1150,14 @@ async def execute_watchdog_task(job_id: str, novel_name: str = '', chapter_count
             if log_callback:
                 await log_callback(f"[看门狗任务] 🐕 多线程生成音频任务执行完成\n")
 
-        await check_rtf_in_logs(log_callback)
+        # 检查RTF并处理
+        is_high_rtf = await check_rtf_in_logs(log_callback)
+        if is_high_rtf:
+            await handle_high_rtf(log_callback)
+        else:
+            log_info(f"✅ RTF 检查正常")
+            if log_callback:
+                await log_callback(f"[RTF检查] ✅ RTF 正常，继续监控...\n")
 
         log_info(f"🐕 看门狗任务执行完成")
         if log_callback:
@@ -1260,6 +1267,85 @@ async def check_rtf_in_logs(log_callback=None) -> bool:
         return False
 
     return found_high_rtf
+
+async def handle_high_rtf(log_callback=None):
+    """处理 RTF > 0.8 的情况：停止 server、等待、重加载、恢复任务"""
+    global server_instance, batch_generate_state
+
+    try:
+        log_warning(f"{'='*60}")
+        log_warning(f"⚠️ 发现RTF大于0.8，开始处理...")
+        log_warning(f"{'='*60}")
+
+        if log_callback:
+            await log_callback(f"[RTF处理] ⚠️ 发现RTF大于0.8，开始处理...\n")
+
+        # 1. 标记任务为暂停状态
+        batch_generate_state['is_paused'] = True
+        batch_generate_state['is_stopping'] = True
+
+        # 2. 停止 server
+        if server_instance is not None:
+            log_info(f"🛑 停止 VoxCPM server...")
+            if log_callback:
+                await log_callback(f"[RTF处理] 🛑 停止 VoxCPM server...\n")
+            await server_instance.stop()
+            log_info(f"✅ Server 已停止")
+        else:
+            log_warning(f"⚠️ server_instance 为 None，跳过停止")
+
+        # 3. 等待 60 秒
+        log_info(f"⏳ 等待 60 秒后重新加载模型...")
+        if log_callback:
+            await log_callback(f"[RTF处理] ⏳ 等待 60 秒...\n")
+        await asyncio.sleep(60)
+
+        # 4. 重新加载模型
+        log_info(f"🔄 重新加载 VoxCPM 模型...")
+        if log_callback:
+            await log_callback(f"[RTF处理] 🔄 重新加载模型...\n")
+
+        from nanovllm_voxcpm import VoxCPM
+
+        new_server = VoxCPM.from_pretrained(
+            "./VoxCPM1.5/",
+            max_num_batched_tokens=8192,
+            max_num_seqs=16,
+            max_model_len=4096,
+            gpu_memory_utilization=0.95,
+            enforce_eager=False,
+            devices=[0]
+        )
+
+        # 5. 更新全局 server 实例
+        server_instance = new_server
+        set_server_instance(new_server)
+        log_info(f"✅ 模型重新加载完成")
+
+        if log_callback:
+            await log_callback(f"[RTF处理] ✅ 模型重新加载完成\n")
+
+        # 6. 标记停止完成
+        batch_generate_state['is_stopping'] = False
+
+        # 7. 等待 120 秒后恢复任务
+        log_info(f"⏳ 等待 120 秒后恢复任务...")
+        if log_callback:
+            await log_callback(f"[RTF处理] ⏳ 等待 120 秒后恢复任务...\n")
+        await asyncio.sleep(120)
+
+        # 8. 恢复任务
+        if batch_generate_state['is_paused']:
+            batch_generate_state['is_paused'] = False
+            log_info(f"🔄 恢复批量生成任务...")
+            if log_callback:
+                await log_callback(f"[RTF处理] 🔄 恢复批量生成任务...\n")
+
+    except Exception as e:
+        log_error(f"❌ 处理 RTF 失败: {e}")
+        if log_callback:
+            await log_callback(f"[RTF处理] ❌ 处理失败: {e}\n")
+        batch_generate_state['is_stopping'] = False
 
 def add_parse_job(job_id: str, cron: str, novel_name: str, chapter_count: int, thread_count: int):
     """添加定时解析任务"""
