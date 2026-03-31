@@ -43,6 +43,13 @@
 2. Cron 表达式触发 RTF 检查（最新 log 文件最后 10 行，RTF > 0.8）
 3. 原有多线程生成逻辑保持不变
 
+**Plans:** 1/1 plans complete
+
+**Plan list:**
+- [x] 02-01-PLAN.md — 修改看门狗任务执行逻辑
+
+**Verification:** [02-批量生成看门狗优化-VERIFICATION.md](./phases/02-批量生成看门狗优化/02-批量生成看门狗优化-VERIFICATION.md)
+
 ---
 
 ## Traceability
@@ -51,12 +58,14 @@
 |-------------|-------|--------|
 | UI-STATS-01 | Phase 1 | Complete |
 | UI-STATS-02 | Phase 1 | Complete |
+| UI-WATCHDOG-01 | Phase 2 | Complete |
+| UI-WATCHDOG-02 | Phase 2 | Complete |
 
 **Coverage:**
-- v1 requirements: 2 total
-- Mapped to phases: 2
+- v1 requirements: 4 total
+- Mapped to phases: 4
 - Unmapped: 0 ✓
 
 ---
 
-*Last updated: 2026-03-30 after Phase 1 Plan 03 complete*
+*Last updated: 2026-03-31 after Phase 2 Plan 01 verification*
