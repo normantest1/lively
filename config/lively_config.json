@@ -5,5 +5,10 @@
     "model_name": "MiniMax-M2.7",
     "max_token": 20480,
     "max_section_length": 3000,
-    "preload_role_count": 20
+    "preload_role_count": 20,
+    "rtf_threshold": 0.8,
+    "watchdog_auto_recovery": true,
+    "watchdog_reload_wait_seconds": 60,
+    "watchdog_resume_wait_seconds": 120,
+    "watchdog_log_check_lines": 10
 }
