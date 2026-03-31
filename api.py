@@ -1,6 +1,7 @@
 
 import traceback
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from starlette.middleware.cors import CORSMiddleware
 from bean.beans import RoleAudio, Role, Novel, get_db, NovelName
@@ -44,6 +45,7 @@ from scheduler_tasks import (
     get_task_logs,
     clear_task_logs
 )
+from utils.config import load_config
 
 db = get_db()
 
@@ -183,6 +185,7 @@ def cleanup_temp_wavs():
 async def restore_watchdog_tasks():
     """恢复看门狗任务"""
     from bean import beans
+    from scheduler_tasks import execute_watchdog_task
     WatchdogTask = beans.WatchdogTask
 
     config_path = Path(__file__).resolve().parent / "config/lively_config.json"
@@ -209,7 +212,20 @@ async def restore_watchdog_tasks():
     db = get_db()
     running_tasks = WatchdogTask.select().where(WatchdogTask.is_running == True)
     for task in running_tasks:
-        msg = f"恢复看门狗任务: {task.novel_name}, 线程: {task.thread_count}, 进度: {task.completed_chapters}/{task.total_chapters}"
+        remaining_chapters = task.total_chapters - task.completed_chapters
+        if remaining_chapters <= 0:
+            # 任务已完成，标记为未运行
+            WatchdogTask.update(is_running=False).where(WatchdogTask.id == task.id).execute()
+            msg = f"看门狗任务已完成: {task.novel_name}"
+            log(msg)
+            await manager.send_message(json.dumps({
+                "type": "watchdog_recovery",
+                "message": msg,
+                "duration": 5
+            }))
+            continue
+
+        msg = f"🔄 恢复看门狗任务: {task.novel_name}, 线程: {task.thread_count}, 进度: {task.completed_chapters}/{task.total_chapters}，剩余: {remaining_chapters} 章"
         log(msg)
         # 发送WebSocket通知
         await manager.send_message(json.dumps({
@@ -217,6 +233,22 @@ async def restore_watchdog_tasks():
             "message": msg,
             "duration": 5
         }))
+
+        # 实际执行恢复任务 - 传入剩余章节数和 is_recovery=True
+        try:
+            loop = asyncio.get_event_loop()
+            loop.create_task(execute_watchdog_task(
+                job_id=task.job_id,
+                novel_name=task.novel_name,
+                chapter_count=remaining_chapters,  # 传入剩余章节数
+                thread_count=task.thread_count,
+                log_callback=None,
+                is_recovery=True,  # 标记为恢复模式
+                existing_completed=task.completed_chapters  # 传递已完成的章节数
+            ))
+            log(f"🐕 已启动恢复任务: job_id={task.job_id}, 剩余 {remaining_chapters} 章 (已完成 {task.completed_chapters} 章)")
+        except Exception as e:
+            log_error(f"❌ 恢复看门狗任务失败: {e}")
 
 # ============ FastAPI 应用 ============
 @asynccontextmanager

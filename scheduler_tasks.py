@@ -737,10 +737,11 @@ async def execute_single_chapter_from_queue(thread_id, novel_data, load_role_lis
             "thread_id": thread_id
         }
 
-async def execute_multithread_generate_task(job_id: str, novel_name: str, chapter_count: int, thread_count: int, log_callback=None):
+async def execute_multithread_generate_task(job_id: str, novel_name: str, chapter_count: int, thread_count: int, log_callback=None, existing_completed: int = 0):
     """执行多线程批量生成音频任务 - 队列模式
 
-    新任务触发时，如果旧任务正在执行，则中断旧任务，立即执行新任务
+    Args:
+        existing_completed: 已完成的章节数（恢复时使用），用于正确累加进度
     """
     global multithread_generate_task_running, multithread_generate_current_job_id, multithread_generate_cancel_event, server_instance, multithread_generate_task_lock
 
@@ -842,7 +843,7 @@ async def execute_multithread_generate_task(job_id: str, novel_name: str, chapte
         # 更新任务状态
         batch_generate_state['threads'] = thread_count
         batch_generate_state['total_chapters'] = chapter_count
-        batch_generate_state['completed_chapters'] = 0
+        batch_generate_state['completed_chapters'] = existing_completed  # 恢复时使用已完成的章节数
         batch_generate_state['is_paused'] = False
         batch_generate_state['is_stopping'] = False
 
@@ -1138,8 +1139,13 @@ async def execute_multithread_generate_task(job_id: str, novel_name: str, chapte
             multithread_generate_cancel_event = None
         log_info(f"🏃 多线程生成任务执行器退出，任务ID: {job_id}")
 
-async def execute_watchdog_task(job_id: str, novel_name: str = '', chapter_count: int = 0, thread_count: int = 0, log_callback=None):
-    """执行看门狗任务 - 检测RTF值是否大于0.8"""
+async def execute_watchdog_task(job_id: str, novel_name: str = '', chapter_count: int = 0, thread_count: int = 0, log_callback=None, is_recovery: bool = False, existing_completed: int = 0):
+    """执行看门狗任务 - 检测RTF值是否大于0.8
+
+    Args:
+        is_recovery: 如果为True，则跳过创建新的WatchdogTask记录，使用已存在的记录（用于服务器重启后恢复）
+        existing_completed: 恢复时已完成的章节数，用于正确累加进度
+    """
     global watchdog_task_running, watchdog_current_job_id, watchdog_cancel_event, server_instance
 
     log_info(f"="*80)
@@ -1178,7 +1184,8 @@ async def execute_watchdog_task(job_id: str, novel_name: str = '', chapter_count
             await log_callback(f"[看门狗任务] 🐕 看门狗任务开始执行...\n")
 
         # 创建看门狗任务记录到数据库
-        if novel_name and chapter_count > 0:
+        if novel_name and chapter_count > 0 and not is_recovery:
+            # 只有在新任务时才创建记录，恢复任务时跳过
             try:
                 db = get_db()
                 with db.atomic():
@@ -1207,7 +1214,8 @@ async def execute_watchdog_task(job_id: str, novel_name: str = '', chapter_count
                 novel_name=novel_name,
                 chapter_count=chapter_count,
                 thread_count=thread_count,
-                log_callback=log_callback
+                log_callback=log_callback,
+                existing_completed=existing_completed  # 恢复时传递已完成的章节数
             )
 
             log_info(f"🐕 多线程生成音频任务执行完成")
