@@ -40,6 +40,53 @@
 - 支持分页（如需要）
 - 错误处理完善
 
+### UI-WATCHDOG-03: RTF重启阈值可配置
+
+**描述:** 在设置界面添加 RTF 重启阈值配置项
+
+**配置要求:**
+- [x] RTF 阈值输入框（el-input-number）
+  - 最小值 0，最大值 2，step 0.1，精度 2 位小数
+- [x] 保存到 config/lively_config.json 的 rtf_threshold 字段
+- [x] scheduler_tasks.py 从配置文件读取，而非硬编码 0.8
+- [x] 日志和打印信息动态显示实际使用的 RTF 值
+
+**验收标准:**
+- 配置值保存后重启任务仍生效
+- 日志中显示的 RTF 值与配置一致
+
+### UI-WATCHDOG-04: 看门狗生成任务自动重启开关
+
+**描述:** 添加看门狗任务持久化和自动恢复功能
+
+**开关要求:**
+- [x] 设置界面添加"看门狗生成任务自动重启"开关（el-switch）
+- [x] 默认开启（watchdog_auto_recovery: true）
+- [x] 开关状态保存到 config/lively_config.json
+
+**持久化要求:**
+- [x] 创建 watchdog_tasks 数据库表
+- [x] 任务执行时记录 job_id, novel_name, thread_count, total_chapters, completed_chapters, is_running
+- [x] 每完成一章更新 completed_chapters
+- [x] 系统启动时恢复未完成的任务（WebSocket 推送消息）
+
+**开关关闭行为:**
+- [x] 系统启动后删除 watchdog_tasks 表中所有记录
+- [x] 显示 5 秒提示，控制台和日志同时记录
+
+### UI-WATCHDOG-05: 系统启动时清理temp目录wav文件
+
+**描述:** 系统启动时自动清理临时音频文件
+
+**清理要求:**
+- [x] 系统启动时调用 cleanup_temp_wavs() 函数
+- [x] 删除 temp/*.wav 文件
+- [x] 不提供手动清理按钮或 API
+
+**验收标准:**
+- temp 目录下无残留 wav 文件
+- 清理后系统正常运行
+
 ## v2 Requirements (Deferred)
 
 - 用户管理功能（多用户、权限控制）
@@ -55,4 +102,4 @@
 
 ---
 
-*Traceability: UI-STATS-01, UI-STATS-02 → Phase 1 (统计仪表盘)*
+*Traceability: UI-STATS-01, UI-STATS-02 → Phase 1; UI-WATCHDOG-03, UI-WATCHDOG-04, UI-WATCHDOG-05 → Phase 3*
