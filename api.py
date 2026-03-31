@@ -191,6 +191,8 @@ async def restore_watchdog_tasks():
     config_path = Path(__file__).resolve().parent / "config/lively_config.json"
     auto_recovery = load_config(config_path, "watchdog_auto_recovery")
 
+    log(f"🔍 [恢复调试] watchdog_auto_recovery = {auto_recovery}")
+
     if auto_recovery is None:
         auto_recovery = True  # 默认开启
 
@@ -211,6 +213,8 @@ async def restore_watchdog_tasks():
     # 读取所有未完成的任务
     db = get_db()
     running_tasks = WatchdogTask.select().where(WatchdogTask.is_running == True)
+    log(f"🔍 [恢复调试] 查询到 {len(running_tasks)} 个 is_running=True 的任务")
+
     for task in running_tasks:
         remaining_chapters = task.total_chapters - task.completed_chapters
         if remaining_chapters <= 0:
