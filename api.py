@@ -185,8 +185,9 @@ def cleanup_temp_wavs():
 async def restore_watchdog_tasks():
     """恢复看门狗任务"""
     from bean import beans
-    from scheduler_tasks import execute_watchdog_task
+    from scheduler_tasks import execute_watchdog_task, scheduler
     WatchdogTask = beans.WatchdogTask
+    ScheduledTask = beans.ScheduledTask
 
     config_path = Path(__file__).resolve().parent / "config/lively_config.json"
     auto_recovery = load_config(config_path, "watchdog_auto_recovery")
@@ -200,12 +201,15 @@ async def restore_watchdog_tasks():
         # 关闭自动恢复时，删除所有任务记录
         db = get_db()
         with db.atomic():
-            deleted = WatchdogTask.delete().execute()
-        log(f"已删除 {deleted} 条看门狗任务记录（自动恢复已关闭）")
+            # 删除 watchdog_tasks 表中的记录
+            deleted_watchdog = WatchdogTask.delete().execute()
+            # 删除 scheduled_tasks 表中的看门狗任务
+            deleted_scheduled = ScheduledTask.delete().where(ScheduledTask.job_type == 'watchdog').execute()
+        log(f"已删除 {deleted_watchdog} 条看门狗任务记录和 {deleted_scheduled} 条定时任务（自动恢复已关闭）")
         # 发送WebSocket通知
         await manager.send_message(json.dumps({
             "type": "watchdog_recovery",
-            "message": f"已清理 {deleted} 条看门狗任务记录",
+            "message": f"已清理看门狗任务，自动恢复已关闭",
             "duration": 5
         }))
         return
@@ -214,6 +218,18 @@ async def restore_watchdog_tasks():
     db = get_db()
     running_tasks = WatchdogTask.select().where(WatchdogTask.is_running == True)
     log(f"🔍 [恢复调试] 查询到 {len(running_tasks)} 个 is_running=True 的任务")
+
+    if len(running_tasks) == 0:
+        # 没有恢复记录，删除 scheduled_tasks 中的看门狗任务，不触发新任务
+        with db.atomic():
+            deleted = ScheduledTask.delete().where(ScheduledTask.job_type == 'watchdog').execute()
+        log(f"⚠️ 数据库中无看门狗恢复记录，删除 {deleted} 条定时任务，不触发新任务")
+        await manager.send_message(json.dumps({
+            "type": "watchdog_recovery",
+            "message": f"无恢复记录，已清理看门狗定时任务",
+            "duration": 5
+        }))
+        return
 
     for task in running_tasks:
         remaining_chapters = task.total_chapters - task.completed_chapters
