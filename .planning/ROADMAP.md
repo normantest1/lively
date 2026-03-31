@@ -60,12 +60,33 @@
 | UI-STATS-02 | Phase 1 | Complete |
 | UI-WATCHDOG-01 | Phase 2 | Complete |
 | UI-WATCHDOG-02 | Phase 2 | Complete |
+| UI-WATCHDOG-03 | Phase 3 | Pending |
+| UI-WATCHDOG-04 | Phase 3 | Pending |
 
 **Coverage:**
 - v1 requirements: 4 total
 - Mapped to phases: 4
 - Unmapped: 0 ✓
 
+### Phase 3: 修改看门狗功能/添加设置功能
+
+**Goal:** 将看门狗功能的硬编码参数改为可配置，添加到设置页面
+
+**Requirements:**
+- UI-WATCHDOG-03: 看门狗设置（看门狗参数可配置）
+- UI-WATCHDOG-04: 设置页面展示看门狗配置
+
+**Success Criteria:**
+1. 看门狗参数（RTF阈值、重载等待、恢复等待、日志检查行数）存储在配置文件中
+2. 设置页面可以查看和修改看门狗参数
+3. 修改设置后看门狗任务立即使用新参数
+
+**Plans:** 2/2 plans
+
+Plans:
+- [x] 03-01-PLAN.md — Backend: config + SettingsRequest model
+- [x] 03-02-PLAN.md — Backend: scheduler_tasks + Frontend: SettingsView
+
 ---
 
-*Last updated: 2026-03-31 after Phase 2 Plan 01 verification*
+*Last updated: 2026-03-31 after Phase 3 planning*
