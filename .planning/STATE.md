@@ -5,7 +5,7 @@ milestone_name: milestone
 status: Milestone complete
 last_updated: "2026-03-31T05:14:29.574Z"
 progress:
-  total_phases: 2
+  total_phases: 3
   completed_phases: 2
   total_plans: 5
   completed_plans: 5
@@ -38,7 +38,7 @@ See: .planning/PROJECT.md (updated 2026-03-30)
 
 ### Roadmap Evolution
 
-- Phase 3 added: 修改看门狗功能/添加设置功能
+- Phase 3 added: 修改看门狗功能/添加设置功能 (RTF可配置 + 看门狗任务持久化 + temp清理)
 
 ## Session History
 
@@ -51,3 +51,4 @@ See: .planning/PROJECT.md (updated 2026-03-30)
 - **2026-03-30**: Phase 1 Gap Plan 01-GAP-01 completed — Added avg_chapters_per_novel to API and DashboardView; Replaced el-table with el-chart for novel state distribution
 - **2026-03-31**: Phase 2 Plan 01 completed — 批量生成看门狗优化: Added batch_generate_state tracking, immediate execution on add, separated RTF check, added handle_high_rtf function, state tracking in multi-thread generate
 - **2026-03-31**: Phase 2 Plan 01 verified — All must_haves verified via spot-checks; VERIFICATION.md created; ROADMAP.md updated with Phase 2 complete
+- **2026-03-31**: Phase 3 context gathered — 决策: watchdog_tasks 新表、WebSocket 推送恢复消息、开关默认开启、仅启动时清理 temp
