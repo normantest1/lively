@@ -1910,6 +1910,16 @@ def save_settings(settings: SettingsRequest):
 
         existing_settings.update(settings_dict)
 
+        # 检查看门狗自动恢复设置是否被关闭
+        if 'watchdog_auto_recovery' in settings_dict and settings_dict['watchdog_auto_recovery'] is False:
+            # 删除所有看门狗任务记录
+            from bean import beans
+            WatchdogTask = beans.WatchdogTask
+            db = get_db()
+            with db.atomic():
+                deleted = WatchdogTask.delete().execute()
+            log(f"看门狗自动恢复已关闭，删除了 {deleted} 条任务记录")
+
         with open(CONFIG_FILE, 'w', encoding='utf-8') as f:
             json.dump(existing_settings, f, ensure_ascii=False, indent=4)
 
