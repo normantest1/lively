@@ -29,3 +29,4 @@ See: .planning/PROJECT.md (updated 2026-03-30)
 - **2026-03-30**: Phase 1 Plan 02 completed — Backend API endpoints /api/stats/novels and /api/stats/roles/top added with frontend bindings
 - **2026-03-30**: Phase 1 Plan 03 completed — DashboardView.vue, router, and menu item added. Deviation: replaced charts with tables due to missing chart-ready API data.
 - **2026-03-30**: Phase 1 Gap Plan 01-GAP-01 completed — Added avg_chapters_per_novel to API and DashboardView; Replaced el-table with el-chart for novel state distribution
+- **2026-03-31**: Phase 2 Plan 01 completed — 批量生成看门狗优化: Added batch_generate_state tracking, immediate execution on add, separated RTF check, added handle_high_rtf function, state tracking in multi-thread generate
