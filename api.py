@@ -183,50 +183,78 @@ def cleanup_temp_wavs():
                 log_error(f"清理临时文件失败: {e}")
 
 async def restore_watchdog_tasks():
-    """恢复看门狗任务"""
+    """恢复看门狗任务
+
+    逻辑：
+    1. 数据库有 RTF 看门狗任务(scheduled_tasks) + 开关打开 → 恢复生成音频任务
+    2. 数据库没有 RTF 看门狗任务 + 开关打开 → 不执行恢复，删除所有看门狗数据
+    3. 数据库没有 RTF 看门狗任务 + 开关关闭 → 不执行恢复，删除 watchdog_tasks 数据
+    4. 数据库有 RTF 看门狗任务 + 开关关闭 → 删除 watchdog_tasks 数据
+    """
     from bean import beans
-    from scheduler_tasks import execute_watchdog_task, scheduler
+    from scheduler_tasks import execute_watchdog_task
     WatchdogTask = beans.WatchdogTask
     ScheduledTask = beans.ScheduledTask
 
     config_path = Path(__file__).resolve().parent / "config/lively_config.json"
     auto_recovery = load_config(config_path, "watchdog_auto_recovery")
 
-    log(f"🔍 [恢复调试] watchdog_auto_recovery = {auto_recovery}")
-
     if auto_recovery is None:
         auto_recovery = True  # 默认开启
 
+    log(f"🔍 [恢复调试] watchdog_auto_recovery = {auto_recovery}")
+
+    db = get_db()
+
+    # 检查 scheduled_tasks 中是否有看门狗定时任务
+    watchdog_scheduled = ScheduledTask.select().where(ScheduledTask.job_type == 'watchdog')
+    has_watchdog_scheduled = len(list(watchdog_scheduled)) > 0
+
+    log(f"🔍 [恢复调试] scheduled_tasks 中有 {len(list(watchdog_scheduled))} 个看门狗定时任务")
+
+    # 情况2/3: 数据库没有 RTF 看门狗定时任务
+    if not has_watchdog_scheduled:
+        if auto_recovery:
+            # 情况2: 没有看门狗定时任务 + 开关打开 → 删除所有看门狗数据，不执行恢复
+            with db.atomic():
+                deleted_watchdog = WatchdogTask.delete().execute()
+            log(f"⚠️ 数据库中无看门狗定时任务，删除 {deleted_watchdog} 条 watchdog_tasks 记录，不执行恢复")
+            await manager.send_message(json.dumps({
+                "type": "watchdog_recovery",
+                "message": f"无看门狗定时任务，已清理 watchdog_tasks",
+                "duration": 5
+            }))
+        else:
+            # 情况3: 没有看门狗定时任务 + 开关关闭 → 删除 watchdog_tasks 数据
+            with db.atomic():
+                deleted = WatchdogTask.delete().execute()
+            log(f"⚠️ 数据库中无看门狗定时任务，开关已关闭，删除 {deleted} 条 watchdog_tasks 记录")
+        return
+
+    # 情况4: 有看门狗定时任务 + 开关关闭 → 只删除 watchdog_tasks 数据
     if not auto_recovery:
-        # 关闭自动恢复时，删除所有任务记录
-        db = get_db()
         with db.atomic():
-            # 删除 watchdog_tasks 表中的记录
-            deleted_watchdog = WatchdogTask.delete().execute()
-            # 删除 scheduled_tasks 表中的看门狗任务
-            deleted_scheduled = ScheduledTask.delete().where(ScheduledTask.job_type == 'watchdog').execute()
-        log(f"已删除 {deleted_watchdog} 条看门狗任务记录和 {deleted_scheduled} 条定时任务（自动恢复已关闭）")
-        # 发送WebSocket通知
+            deleted = WatchdogTask.delete().execute()
+        log(f"⚠️ 看门狗定时任务存在但开关已关闭，删除 {deleted} 条 watchdog_tasks 记录，不执行恢复")
         await manager.send_message(json.dumps({
             "type": "watchdog_recovery",
-            "message": f"已清理看门狗任务，自动恢复已关闭",
+            "message": f"开关已关闭，已清理 watchdog_tasks",
             "duration": 5
         }))
         return
 
-    # 读取所有未完成的任务
-    db = get_db()
+    # 情况1: 有看门狗定时任务 + 开关打开 → 恢复执行批量生成任务
+    log(f"✅ 找到看门狗定时任务，开关已打开，准备恢复...")
+
+    # 读取 watchdog_tasks 中未完成的任务
     running_tasks = WatchdogTask.select().where(WatchdogTask.is_running == True)
-    log(f"🔍 [恢复调试] 查询到 {len(running_tasks)} 个 is_running=True 的任务")
 
     if len(running_tasks) == 0:
-        # 没有恢复记录，删除 scheduled_tasks 中的看门狗任务，不触发新任务
-        with db.atomic():
-            deleted = ScheduledTask.delete().where(ScheduledTask.job_type == 'watchdog').execute()
-        log(f"⚠️ 数据库中无看门狗恢复记录，删除 {deleted} 条定时任务，不触发新任务")
+        # watchdog_tasks 中没有恢复记录（首次启动或已完成）
+        log(f"⚠️ watchdog_tasks 中无恢复记录，不执行生成任务恢复")
         await manager.send_message(json.dumps({
             "type": "watchdog_recovery",
-            "message": f"无恢复记录，已清理看门狗定时任务",
+            "message": f"无恢复记录，看门狗定时任务已就绪",
             "duration": 5
         }))
         return
@@ -247,24 +275,23 @@ async def restore_watchdog_tasks():
 
         msg = f"🔄 恢复看门狗任务: {task.novel_name}, 线程: {task.thread_count}, 进度: {task.completed_chapters}/{task.total_chapters}，剩余: {remaining_chapters} 章"
         log(msg)
-        # 发送WebSocket通知
         await manager.send_message(json.dumps({
             "type": "watchdog_recovery",
             "message": msg,
             "duration": 5
         }))
 
-        # 实际执行恢复任务 - 传入剩余章节数和 is_recovery=True
+        # 实际执行恢复任务
         try:
             loop = asyncio.get_event_loop()
             loop.create_task(execute_watchdog_task(
                 job_id=task.job_id,
                 novel_name=task.novel_name,
-                chapter_count=remaining_chapters,  # 传入剩余章节数
+                chapter_count=remaining_chapters,
                 thread_count=task.thread_count,
                 log_callback=None,
-                is_recovery=True,  # 标记为恢复模式
-                existing_completed=task.completed_chapters  # 传递已完成的章节数
+                is_recovery=True,
+                existing_completed=task.completed_chapters
             ))
             log(f"🐕 已启动恢复任务: job_id={task.job_id}, 剩余 {remaining_chapters} 章 (已完成 {task.completed_chapters} 章)")
         except Exception as e:
