@@ -1076,8 +1076,7 @@ async def execute_multithread_generate_task(job_id: str, novel_name: str, chapte
                                 break
                             result = await execute_single_chapter_from_queue(
                                 tid, task_data, load_role_list, novel_name,
-                                server_instance, log_callback, resume_cancel_event,
-                                task_job_id
+                                server_instance, log_callback, resume_cancel_event
                             )
                             completed_chapters.append(result)
                             if result["success"]:
@@ -1186,6 +1185,32 @@ async def execute_watchdog_task(job_id: str, novel_name: str = '', chapter_count
         log_info(f"🐕 看门狗任务开始执行...")
         if log_callback:
             await log_callback(f"[看门狗任务] 🐕 看门狗任务开始执行...\n")
+
+        # 【重要】首先检查 scheduled_tasks 表中是否还有这个看门狗定时任务
+        # 如果没有，说明定时任务已被删除，不应该执行恢复
+        try:
+            from bean import beans
+            ScheduledTask = beans.ScheduledTask
+            db = get_db()
+            watchdog_scheduled = ScheduledTask.select().where(
+                (ScheduledTask.job_type == 'watchdog') &
+                (ScheduledTask.job_id == job_id)
+            ).first()
+
+            if not watchdog_scheduled:
+                # scheduled_tasks 中没有这个看门狗定时任务，清理 watchdog_tasks 并退出
+                with db.atomic():
+                    WatchdogTask.delete().where(WatchdogTask.job_id == job_id).execute()
+                log(f"⚠️ scheduled_tasks 中无看门狗任务 {job_id}，已删除 watchdog_tasks 记录，不执行恢复")
+                if log_callback:
+                    await log_callback(f"[看门狗] ⚠️ 定时任务不存在，已清理并退出\n")
+
+                watchdog_task_running = False
+                watchdog_current_job_id = None
+                watchdog_cancel_event = None
+                return
+        except Exception as e:
+            log_error(f"检查 scheduled_tasks 失败: {e}")
 
         # 检查是否需要恢复任务（数据库中已有 is_running=True 的记录）
         recovery_mode = False
