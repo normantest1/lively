@@ -5,6 +5,7 @@ import queue
 import os
 import glob
 import re
+from pathlib import Path
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 from apscheduler.jobstores.memory import MemoryJobStore
@@ -13,8 +14,11 @@ from nanovllm_voxcpm import VoxCPM
 from parse_text import async_parse_text, parse_novel_data_bind_role_audio
 from generate_audio import load_role_audio, generate_chapter_audio
 from logger import log as logger_log, log_error as logger_log_error
+from utils.config import load_config
 import asyncio
 import concurrent.futures
+
+config_path = Path(__file__).resolve().parent / "config/lively_config.json"
 
 scheduler = AsyncIOScheduler(
     jobstores={'default': MemoryJobStore()},
@@ -927,13 +931,14 @@ async def execute_multithread_generate_task(job_id: str, novel_name: str, chapte
         task_cancel_event = multithread_generate_cancel_event
         task_job_id = job_id
         
-        log_info(f"🔍 调试：为任务 {job_id} 创建独立的cancel_event，id = {id(task_cancel_event) if task_cancel_event else 'None'}")
-        
+        log_info(f"🔍 调试：为任务 {job_id} 创建独立的cancel_event，event_id = {id(task_cancel_event) if task_cancel_event else 'None'}")
+
         async def worker_task(thread_id):
             """工作线程任务：从队列获取任务并执行"""
+            global server_instance
             nonlocal success_count, fail_count
-            
-            log_info(f"[线程-{thread_id}] 🔍 调试：worker_task {task_job_id} 启动，task_cancel_event = {task_cancel_event is not None}, id = {id(task_cancel_event) if task_cancel_event else 'None'}")
+
+            log_info(f"[线程-{thread_id}] 🔍 调试：worker_task {task_job_id} 启动，task_cancel_event = {task_cancel_event is not None}, event_id = {id(task_cancel_event) if task_cancel_event else 'None'}")
             
             if task_cancel_event is None:
                 log_error(f"[线程-{thread_id}] ❌ 错误：task_cancel_event 为 None")
@@ -1040,19 +1045,19 @@ async def execute_multithread_generate_task(job_id: str, novel_name: str, chapte
                     # 重置计数器和已完成列表
                     success_count = 0
                     fail_count = 0
-                    completed_chapters = []
+                    completed_chapters.clear()
                     # 创建新的cancel事件和worker
-                    task_cancel_event = asyncio.Event()
+                    resume_cancel_event = asyncio.Event()
                     async def worker_task_resume(tid):
                         nonlocal success_count, fail_count
-                        while not task_cancel_event.is_set():
+                        while not resume_cancel_event.is_set():
                             try:
                                 task_data = task_queue.get_nowait()
                             except queue.Empty:
                                 break
                             result = await execute_single_chapter_from_queue(
                                 tid, task_data, load_role_list, novel_name,
-                                server_instance, log_callback, task_cancel_event
+                                server_instance, log_callback, resume_cancel_event
                             )
                             completed_chapters.append(result)
                             if result["success"]:
@@ -1064,7 +1069,7 @@ async def execute_multithread_generate_task(job_id: str, novel_name: str, chapte
                             next_rtf = await check_rtf_in_logs(log_callback)
                             if next_rtf:
                                 log_warning("⚠️ 恢复后再次检测到RTF>0.8...")
-                                task_cancel_event.set()
+                                resume_cancel_event.set()
                                 break
                     resume_tasks = [loop.create_task(worker_task_resume(i+1)) for i in range(thread_count)]
                     await asyncio.gather(*resume_tasks)
@@ -1213,9 +1218,13 @@ async def execute_watchdog_task(job_id: str, novel_name: str = '', chapter_count
         log_info(f"🏃 看门狗任务执行器退出，任务ID: {job_id}")
 
 async def check_rtf_in_logs(log_callback=None) -> bool:
-    """检查日志文件中的RTF值，返回是否发现高RTF (>0.8)"""
+    """检查日志文件中的RTF值，返回是否发现高RTF (>threshold)"""
     found_high_rtf = False
     try:
+        # 从配置读取RTF阈值和日志检查行数
+        rtf_threshold = load_config(config_path, "rtf_threshold") or 0.8
+        log_check_lines = load_config(config_path, "watchdog_log_check_lines") or 10
+
         log_dir = "./logs"
 
         if not os.path.exists(log_dir):
@@ -1247,15 +1256,15 @@ async def check_rtf_in_logs(log_callback=None) -> bool:
                 await log_callback(f"[看门狗任务] ❌ 读取日志文件失败: {e}\n")
             return False
 
-        last_10_lines = all_lines[-10:] if len(all_lines) >= 10 else all_lines
+        last_n_lines = all_lines[-log_check_lines:] if len(all_lines) >= log_check_lines else all_lines
 
-        log_info(f"📊 检查最后 {len(last_10_lines)} 行日志...")
+        log_info(f"📊 检查最后 {len(last_n_lines)} 行日志...")
         if log_callback:
-            await log_callback(f"[看门狗任务] 📊 检查最后 {len(last_10_lines)} 行日志...\n")
+            await log_callback(f"[看门狗任务] 📊 检查最后 {len(last_n_lines)} 行日志...\n")
 
         rtf_pattern = re.compile(r'RTF[：:]\s*([\d.]+)')
 
-        for line in last_10_lines:
+        for line in last_n_lines:
             match = rtf_pattern.search(line)
             if match:
                 rtf_value = float(match.group(1))
@@ -1265,23 +1274,23 @@ async def check_rtf_in_logs(log_callback=None) -> bool:
                 if log_callback:
                     await log_callback(f"[看门狗任务] 🔍 发现RTF日志: {line_stripped}\n")
 
-                if rtf_value > 0.8:
+                if rtf_value > rtf_threshold:
                     found_high_rtf = True
-                    warning_msg = f"⚠️ 发现RTF大于0.8: {rtf_value}"
+                    warning_msg = f"⚠️ 发现RTF大于{rtf_threshold}: {rtf_value}"
                     log_warning(warning_msg)
                     if log_callback:
-                        await log_callback(f"[看门狗任务] ⚠️ 发现RTF大于0.8: {rtf_value}\n")
+                        await log_callback(f"[看门狗任务] ⚠️ 发现RTF大于{rtf_threshold}: {rtf_value}\n")
 
                     print(f"\n{'='*80}")
-                    print(f"⚠️ 看门狗警告：发现RTF大于0.8")
+                    print(f"⚠️ 看门狗警告：发现RTF大于{rtf_threshold}")
                     print(f"日志内容: {line_stripped}")
                     print(f"RTF值: {rtf_value}")
                     print(f"{'='*80}\n")
 
         if not found_high_rtf:
-            log_info(f"✅ 未发现RTF大于0.8的日志")
+            log_info(f"✅ 未发现RTF大于{rtf_threshold}的日志")
             if log_callback:
-                await log_callback(f"[看门狗任务] ✅ 未发现RTF大于0.8的日志\n")
+                await log_callback(f"[看门狗任务] ✅ 未发现RTF大于{rtf_threshold}的日志\n")
 
     except Exception as e:
         log_error(f"❌ 检查RTF时出错: {e}")
