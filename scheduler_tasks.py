@@ -991,9 +991,10 @@ async def execute_multithread_generate_task(job_id: str, novel_name: str, chapte
                 # 每章节完成后检查RTF
                 high_rtf = await check_rtf_in_logs(log_callback)
                 if high_rtf:
-                    log_warning("⚠️ 检测到RTF>0.8，准备重启服务器...")
+                    rtf_threshold = load_config(config_path, "rtf_threshold") or 0.8
+                    log_warning(f"⚠️ 检测到RTF>{rtf_threshold}，准备重启服务器...")
                     if log_callback:
-                        await log_callback(f"[看门狗] ⚠️ 检测到RTF>0.8，准备重启服务器\n")
+                        await log_callback(f"[看门狗] ⚠️ 检测到RTF>{rtf_threshold}，准备重启服务器\n")
                     # 设置取消事件，通知所有worker停止
                     task_cancel_event.set()
                     # 记录当前状态
@@ -1004,11 +1005,14 @@ async def execute_multithread_generate_task(job_id: str, novel_name: str, chapte
                         await log_callback(f"[看门狗] 📊 任务中断状态: 线程数={thread_count}, 总章节={total_count}, 已完成={completed}, 剩余={remaining_chapters}\n")
                     # 停止服务器
                     await server_instance.stop()
-                    # 等待1分钟后重新加载
-                    log_info("⏳ 等待1分钟后重新加载模型...")
+                    # 从配置读取等待时间
+                    reload_wait = load_config(config_path, "watchdog_reload_wait_seconds") or 60
+                    resume_wait = load_config(config_path, "watchdog_resume_wait_seconds") or 120
+                    # 等待reload_wait秒后重新加载
+                    log_info(f"⏳ 等待{reload_wait}秒后重新加载模型...")
                     if log_callback:
-                        await log_callback("[看门狗] ⏳ 等待1分钟后重新加载模型...\n")
-                    await asyncio.sleep(60)
+                        await log_callback(f"[看门狗] ⏳ 等待{reload_wait}秒后重新加载模型...\n")
+                    await asyncio.sleep(reload_wait)
                     log_info("🔄 重新加载VoxCPM模型...")
                     if log_callback:
                         await log_callback("[看门狗] 🔄 重新加载VoxCPM模型...\n")
@@ -1023,11 +1027,11 @@ async def execute_multithread_generate_task(job_id: str, novel_name: str, chapte
                         devices=[0]
                     )
                     set_server_instance(server_instance)
-                    # 等待2分钟后恢复任务
-                    log_info("⏳ 等待2分钟后恢复任务...")
+                    # 等待resume_wait秒后恢复任务
+                    log_info(f"⏳ 等待{resume_wait}秒后恢复任务...")
                     if log_callback:
-                        await log_callback("[看门狗] ⏳ 等待2分钟后恢复任务...\n")
-                    await asyncio.sleep(120)
+                        await log_callback(f"[看门狗] ⏳ 等待{resume_wait}秒后恢复任务...\n")
+                    await asyncio.sleep(resume_wait)
                     # 重新查询剩余章节（current_state=2）
                     db = get_db()
                     remaining_novels = Novel.select().where(
@@ -1068,7 +1072,8 @@ async def execute_multithread_generate_task(job_id: str, novel_name: str, chapte
                             # 继续检查RTF（链式检测）
                             next_rtf = await check_rtf_in_logs(log_callback)
                             if next_rtf:
-                                log_warning("⚠️ 恢复后再次检测到RTF>0.8...")
+                                rtf_threshold = load_config(config_path, "rtf_threshold") or 0.8
+                                log_warning(f"⚠️ 恢复后再次检测到RTF>{rtf_threshold}...")
                                 resume_cancel_event.set()
                                 break
                     resume_tasks = [loop.create_task(worker_task_resume(i+1)) for i in range(thread_count)]
@@ -1301,16 +1306,21 @@ async def check_rtf_in_logs(log_callback=None) -> bool:
     return found_high_rtf
 
 async def handle_high_rtf(log_callback=None):
-    """处理 RTF > 0.8 的情况：停止 server、等待、重加载、恢复任务"""
+    """处理 RTF > threshold 的情况：停止 server、等待、重加载、恢复任务"""
     global server_instance, batch_generate_state
 
     try:
+        # 从配置读取RTF阈值和等待时间
+        rtf_threshold = load_config(config_path, "rtf_threshold") or 0.8
+        reload_wait = load_config(config_path, "watchdog_reload_wait_seconds") or 60
+        resume_wait = load_config(config_path, "watchdog_resume_wait_seconds") or 120
+
         log_warning(f"{'='*60}")
-        log_warning(f"⚠️ 发现RTF大于0.8，开始处理...")
+        log_warning(f"⚠️ 发现RTF大于{rtf_threshold}，开始处理...")
         log_warning(f"{'='*60}")
 
         if log_callback:
-            await log_callback(f"[RTF处理] ⚠️ 发现RTF大于0.8，开始处理...\n")
+            await log_callback(f"[RTF处理] ⚠️ 发现RTF大于{rtf_threshold}，开始处理...\n")
 
         # 1. 标记任务为暂停状态
         batch_generate_state['is_paused'] = True
@@ -1326,11 +1336,11 @@ async def handle_high_rtf(log_callback=None):
         else:
             log_warning(f"⚠️ server_instance 为 None，跳过停止")
 
-        # 3. 等待 60 秒
-        log_info(f"⏳ 等待 60 秒后重新加载模型...")
+        # 3. 等待 reload_wait 秒
+        log_info(f"⏳ 等待 {reload_wait} 秒后重新加载模型...")
         if log_callback:
-            await log_callback(f"[RTF处理] ⏳ 等待 60 秒...\n")
-        await asyncio.sleep(60)
+            await log_callback(f"[RTF处理] ⏳ 等待 {reload_wait} 秒...\n")
+        await asyncio.sleep(reload_wait)
 
         # 4. 重新加载模型
         log_info(f"🔄 重新加载 VoxCPM 模型...")
@@ -1360,11 +1370,11 @@ async def handle_high_rtf(log_callback=None):
         # 6. 标记停止完成
         batch_generate_state['is_stopping'] = False
 
-        # 7. 等待 120 秒后恢复任务
-        log_info(f"⏳ 等待 120 秒后恢复任务...")
+        # 7. 等待 resume_wait 秒后恢复任务
+        log_info(f"⏳ 等待 {resume_wait} 秒后恢复任务...")
         if log_callback:
-            await log_callback(f"[RTF处理] ⏳ 等待 120 秒后恢复任务...\n")
-        await asyncio.sleep(120)
+            await log_callback(f"[RTF处理] ⏳ 等待 {resume_wait} 秒后恢复任务...\n")
+        await asyncio.sleep(resume_wait)
 
         # 8. 恢复任务
         if batch_generate_state['is_paused']:
