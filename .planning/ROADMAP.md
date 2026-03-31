@@ -68,12 +68,12 @@
 4. 系统启动时自动清理temp/*.wav文件
 5. 所有状态变更都有前台提示(5秒)和日志记录
 
-**Plans:** 3/3 plans
+**Plans:** 1/3 plans complete
 
 **Plan list:**
-- [x] 03-01-PLAN.md — Backend Core: Config + Database + Settings API
-- [x] 03-02-PLAN.md — Frontend Settings + RTF Config + Temp Cleanup
-- [x] 03-03-PLAN.md — Watchdog Task Persistence + Recovery
+- [x] 03-01-PLAN.md — Backend Core: Config + Database + Settings API (COMPLETE)
+- [ ] 03-02-PLAN.md — Frontend Settings + RTF Config + Temp Cleanup
+- [ ] 03-03-PLAN.md — Watchdog Task Persistence + Recovery
 
 ---
 
@@ -85,8 +85,8 @@
 | UI-STATS-02 | Phase 1 | Complete |
 | UI-WATCHDOG-01 | Phase 2 | Complete |
 | UI-WATCHDOG-02 | Phase 2 | Complete |
-| UI-WATCHDOG-03 | Phase 3 | Pending |
-| UI-WATCHDOG-04 | Phase 3 | Pending |
+| UI-WATCHDOG-03 | Phase 3 | Partial (Plan 01 config/DB/API done) |
+| UI-WATCHDOG-04 | Phase 3 | Partial (Plan 01 model done) |
 | UI-WATCHDOG-05 | Phase 3 | Pending |
 
 **Coverage:**
