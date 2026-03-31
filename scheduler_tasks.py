@@ -1566,7 +1566,8 @@ def add_watchdog_job(job_id: str, cron: str, novel_name: str = '', chapter_count
             trigger=trigger,
             id=job_id,
             name=f"看门狗任务_{novel_name}",
-            args=[job_id, novel_name, chapter_count, thread_count],
+            # Cron触发时只检查RTF，不执行生成，所以传空值
+            args=[job_id, '', 0, 0],
             replace_existing=True
         )
 
