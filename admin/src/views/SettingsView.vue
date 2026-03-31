@@ -90,6 +90,59 @@
           </div>
         </el-form-item>
 
+        <el-divider content-position="left">看门狗设置</el-divider>
+
+        <el-form-item label="RTF 重启阈值" prop="rtf_threshold">
+          <el-input-number
+            v-model="formData.rtf_threshold"
+            :min="0"
+            :max="2"
+            :step="0.1"
+            :precision="2"
+            style="width: 100%"
+          />
+          <div style="color: #909399; font-size: 12px; margin-top: 5px;">
+            当 RTF 大于此值时自动重启模型（值范围：0-2）
+          </div>
+        </el-form-item>
+
+        <el-form-item label="模型重载等待(秒)" prop="watchdog_reload_wait_seconds">
+          <el-input-number
+            v-model="formData.watchdog_reload_wait_seconds"
+            :min="10"
+            :max="300"
+            :step="10"
+            style="width: 100%"
+          />
+        </el-form-item>
+
+        <el-form-item label="恢复任务等待(秒)" prop="watchdog_resume_wait_seconds">
+          <el-input-number
+            v-model="formData.watchdog_resume_wait_seconds"
+            :min="10"
+            :max="300"
+            :step="10"
+            style="width: 100%"
+          />
+        </el-form-item>
+
+        <el-form-item label="日志检查行数" prop="watchdog_log_check_lines">
+          <el-input-number
+            v-model="formData.watchdog_log_check_lines"
+            :min="5"
+            :max="50"
+            :step="5"
+            style="width: 100%"
+          />
+        </el-form-item>
+
+        <el-form-item label="自动恢复任务" prop="watchdog_auto_recovery">
+          <el-switch v-model="formData.watchdog_auto_recovery" />
+          <div style="color: #909399; font-size: 12px; margin-top: 5px;">
+            开启后，系统重启时可自动恢复看门狗生成任务
+          </div>
+        </el-form-item>
+
         <el-form-item>
           <el-button type="primary" @click="handleSave" :loading="saving">保存设置</el-button>
           <el-button @click="handleReset">重置</el-button>
@@ -116,7 +169,12 @@ const formData = reactive({
   model_name: 'gpt-3.5-turbo',
   max_token: 2000,
   preload_role_count: 5,
-  bind_audio_presence_rate: 0.4
+  bind_audio_presence_rate: 0.4,
+  rtf_threshold: 0.8,
+  watchdog_auto_recovery: true,
+  watchdog_reload_wait_seconds: 60,
+  watchdog_resume_wait_seconds: 120,
+  watchdog_log_check_lines: 10
 })
 
 const formRules = {
@@ -158,7 +216,12 @@ const loadSettings = async () => {
       model_name: data.model_name || 'gpt-3.5-turbo',
       max_token: data.max_token || 2000,
       preload_role_count: data.preload_role_count || 5,
-      bind_audio_presence_rate: data.bind_audio_presence_rate || 0.4
+      bind_audio_presence_rate: data.bind_audio_presence_rate || 0.4,
+      rtf_threshold: data.rtf_threshold ?? 0.8,
+      watchdog_auto_recovery: data.watchdog_auto_recovery ?? true,
+      watchdog_reload_wait_seconds: data.watchdog_reload_wait_seconds ?? 60,
+      watchdog_resume_wait_seconds: data.watchdog_resume_wait_seconds ?? 120,
+      watchdog_log_check_lines: data.watchdog_log_check_lines ?? 10
     })
   } catch (error) {
     console.error('加载设置失败:', error)
