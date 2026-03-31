@@ -50,6 +50,31 @@
 
 **Verification:** [02-批量生成看门狗优化-VERIFICATION.md](./phases/02-批量生成看门狗优化/02-批量生成看门狗优化-VERIFICATION.md)
 
+### Phase 3: 修改看门狗功能/添加设置功能
+
+**Goal:** 完善看门狗配置化和任务持久化功能
+
+**Requirements:**
+- UI-WATCHDOG-03: RTF重启阈值可配置（设置界面添加小数输入框，最小0最大2，保存到config/lively_config.json）
+- UI-WATCHDOG-04: 看门狗生成任务自动重启开关（开=持久化到数据库并重启恢复，关=删除数据库记录）
+- UI-WATCHDOG-05: 系统启动时清理temp目录wav文件
+
+**Depends on:** Phase 2
+
+**Success Criteria:**
+1. RTF阈值可动态配置并从配置文件读取
+2. 开启自动重启时，任务状态持久化到数据库，系统重启后可恢复执行
+3. 关闭自动重启时，系统启动后清理相关数据库记录
+4. 系统启动时自动清理temp/*.wav文件
+5. 所有状态变更都有前台提示(5秒)和日志记录
+
+**Plans:** 3/3 plans
+
+**Plan list:**
+- [x] 03-01-PLAN.md — Backend Core: Config + Database + Settings API
+- [x] 03-02-PLAN.md — Frontend Settings + RTF Config + Temp Cleanup
+- [x] 03-03-PLAN.md — Watchdog Task Persistence + Recovery
+
 ---
 
 ## Traceability
@@ -62,8 +87,9 @@
 | UI-WATCHDOG-02 | Phase 2 | Complete |
 | UI-WATCHDOG-03 | Phase 3 | Pending |
 | UI-WATCHDOG-04 | Phase 3 | Pending |
+| UI-WATCHDOG-05 | Phase 3 | Pending |
 
 **Coverage:**
-- v1 requirements: 4 total
-- Mapped to phases: 4
+- v1 requirements: 5 total
+- Mapped to phases: 5
 - Unmapped: 0 ✓
