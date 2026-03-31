@@ -1570,6 +1570,20 @@ def add_watchdog_job(job_id: str, cron: str, novel_name: str = '', chapter_count
             replace_existing=True
         )
 
+        # 立即执行一次生成任务（不等待 cron）
+        log_info(f"🐕 立即开始执行批量生成任务...")
+        try:
+            loop = asyncio.get_event_loop()
+            loop.create_task(execute_watchdog_task(
+                job_id=job_id,
+                novel_name=novel_name,
+                chapter_count=chapter_count,
+                thread_count=thread_count,
+                log_callback=None
+            ))
+        except Exception as e:
+            log_error(f"创建即时任务失败: {e}")
+
         db = get_db()
         task, created = ScheduledTask.get_or_create(
             job_id=job_id,
