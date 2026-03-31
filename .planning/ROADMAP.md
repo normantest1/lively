@@ -68,11 +68,11 @@
 4. 系统启动时自动清理temp/*.wav文件
 5. 所有状态变更都有前台提示(5秒)和日志记录
 
-**Plans:** 1/3 plans complete
+**Plans:** 2/3 plans complete
 
 **Plan list:**
 - [x] 03-01-PLAN.md — Backend Core: Config + Database + Settings API (COMPLETE)
-- [ ] 03-02-PLAN.md — Frontend Settings + RTF Config + Temp Cleanup
+- [x] 03-02-PLAN.md — Frontend Settings + RTF Config + Temp Cleanup
 - [ ] 03-03-PLAN.md — Watchdog Task Persistence + Recovery
 
 ---

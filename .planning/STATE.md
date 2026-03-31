@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: Milestone complete
-last_updated: "2026-03-31T05:14:29.574Z"
+last_updated: "2026-03-31T05:49:44.978Z"
 progress:
   total_phases: 3
-  completed_phases: 2
-  total_plans: 5
-  completed_plans: 5
+  completed_phases: 3
+  total_plans: 8
+  completed_plans: 8
 ---
 
 # State
@@ -33,7 +33,7 @@ See: .planning/PROJECT.md (updated 2026-03-30)
 |-------|------|--------|
 | 1 | 统计仪表盘 | Complete |
 | 2 | 批量生成看门狗优化 | Complete |
-| 3 | 修改看门狗功能/添加设置功能 | In progress |
+| 3 | 修改看门狗功能/添加设置功能 | Complete |
 
 ## Accumulated Context
 
@@ -54,3 +54,4 @@ See: .planning/PROJECT.md (updated 2026-03-30)
 - **2026-03-31**: Phase 2 Plan 01 verified — All must_haves verified via spot-checks; VERIFICATION.md created; ROADMAP.md updated with Phase 2 complete
 - **2026-03-31**: Phase 3 context gathered — 决策: watchdog_tasks 新表、WebSocket 推送恢复消息、开关默认开启、仅启动时清理 temp
 - **2026-03-31**: Phase 3 Plan 01 completed — Added watchdog config keys to lively_config.json, WatchdogTask model in bean/beans.py, extended SettingsRequest and get_default_settings in api.py
+- **2026-03-31**: Phase 3 Plan 02 completed — Added watchdog settings UI to SettingsView.vue with RTF threshold, wait times, and auto-recovery switch; Updated scheduler_tasks.py to read all watchdog parameters from config
