@@ -87,6 +87,20 @@ class ScheduledTask(BaseModel):
         table_name = 'scheduled_tasks'
         order_by = ('create_time',)
 
-db.create_tables([Novel,Role,NovelName,RoleAudio,ScheduledTask])
+class WatchdogTask(BaseModel):
+    id = AutoField(primary_key=True)
+    job_id = CharField(max_length=100, unique=True)
+    novel_name = CharField(max_length=100)
+    thread_count = IntegerField(default=4)
+    total_chapters = IntegerField()
+    completed_chapters = IntegerField(default=0)
+    is_running = BooleanField(default=False)
+    create_time = DateTimeField(default=datetime.datetime.now)
+    update_time = DateTimeField(default=datetime.datetime.now)
+
+    class Meta:
+        table_name = 'watchdog_tasks'
+
+db.create_tables([Novel,Role,NovelName,RoleAudio,ScheduledTask,WatchdogTask])
 def get_db():
     return db
