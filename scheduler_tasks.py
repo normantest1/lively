@@ -570,9 +570,9 @@ async def execute_generate_task(job_id: str, novel_name: str, chapter_count: int
             generate_cancel_event = None
         log_info(f"生成任务执行器退出，任务ID: {job_id}")
 
-async def execute_single_chapter_from_queue(thread_id, novel_data, load_role_list, novel_name, server_instance, log_callback=None, cancel_event=None):
+async def execute_single_chapter_from_queue(thread_id, novel_data, load_role_list, novel_name, server_instance, log_callback=None, cancel_event=None, job_id=None):
     """从队列中执行单个章节的音频生成（在线程中运行）
-    
+
     参数:
         thread_id: 线程ID
         novel_data: 小说数据
@@ -581,6 +581,7 @@ async def execute_single_chapter_from_queue(thread_id, novel_data, load_role_lis
         server_instance: 服务器实例
         log_callback: 日志回调
         cancel_event: 取消事件，用于支持任务取消
+        job_id: 任务ID，用于更新看门狗任务记录
     """
     novel = novel_data["novel"]
     chapter_index = novel_data["index"]
@@ -697,15 +698,16 @@ async def execute_single_chapter_from_queue(thread_id, novel_data, load_role_lis
                     await log_callback(f"[进度] {batch_generate_state['completed_chapters']}/{batch_generate_state['total_chapters']} 完成，剩余 {remaining}\n")
 
                 # 更新看门狗任务记录
-                try:
-                    db = get_db()
-                    with db.atomic():
-                        WatchdogTask.update(
-                            completed_chapters=batch_generate_state['completed_chapters'],
-                            update_time=datetime.datetime.now()
-                        ).where(WatchdogTask.job_id == task_job_id).execute()
-                except Exception as e:
-                    log_error(f"更新看门狗任务记录失败: {e}")
+                if job_id:
+                    try:
+                        db = get_db()
+                        with db.atomic():
+                            WatchdogTask.update(
+                                completed_chapters=batch_generate_state['completed_chapters'],
+                                update_time=datetime.datetime.now()
+                            ).where(WatchdogTask.job_id == job_id).execute()
+                    except Exception as e:
+                        log_error(f"更新看门狗任务记录失败: {e}")
 
             return {
                 "success": True, 
@@ -982,7 +984,8 @@ async def execute_multithread_generate_task(job_id: str, novel_name: str, chapte
                     novel_name,
                     server_instance,
                     log_callback,
-                    task_cancel_event
+                    task_cancel_event,
+                    task_job_id
                 )
                 
                 completed_chapters.append(result)
@@ -1073,7 +1076,8 @@ async def execute_multithread_generate_task(job_id: str, novel_name: str, chapte
                                 break
                             result = await execute_single_chapter_from_queue(
                                 tid, task_data, load_role_list, novel_name,
-                                server_instance, log_callback, resume_cancel_event
+                                server_instance, log_callback, resume_cancel_event,
+                                task_job_id
                             )
                             completed_chapters.append(result)
                             if result["success"]:
