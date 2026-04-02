@@ -149,17 +149,60 @@
         </el-form-item>
       </el-form>
     </el-card>
+
+    <el-card style="margin-top: 20px;">
+      <template #header>
+        <span>TTS 模型控制</span>
+      </template>
+      <el-descriptions :column="2" border>
+        <el-descriptions-item label="模型状态">
+          <el-tag :type="ttsStatus === 'loaded' ? 'success' : ttsStatus === 'loading' ? 'warning' : 'info'">
+            {{ ttsStatus === 'loaded' ? '已加载' : ttsStatus === 'loading' ? '加载中...' : '已停止' }}
+          </el-tag>
+        </el-descriptions-item>
+        <el-descriptions-item label="模型名称">VoxCPM1.5</el-descriptions-item>
+      </el-descriptions>
+      <div style="margin-top: 20px;">
+        <el-button
+          type="primary"
+          :loading="ttsLoading"
+          :disabled="ttsStatus !== 'stopped'"
+          @click="handleLoadModel"
+        >
+          加载模型
+        </el-button>
+        <el-button
+          type="danger"
+          :loading="ttsLoading"
+          :disabled="ttsStatus !== 'loaded'"
+          @click="handleStopModel"
+        >
+          停止模型
+        </el-button>
+        <el-button
+          type="warning"
+          :disabled="ttsStatus === 'loading'"
+          @click="handleShutdown"
+        >
+          关闭系统
+        </el-button>
+      </div>
+    </el-card>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, onUnmounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import api from '@/api'
 
 const loading = ref(false)
 const saving = ref(false)
 const formRef = ref(null)
+
+const ttsStatus = ref('stopped')
+const ttsLoading = ref(false)
+let statusPollTimer = null
 
 const formData = reactive({
   database_name: 'novels.db',
@@ -254,8 +297,75 @@ const handleReset = () => {
   loadSettings()
 }
 
+const fetchTtsStatus = async () => {
+  try {
+    const data = await api.getTtsStatus()
+    ttsStatus.value = data.status || (data.loaded ? 'loaded' : 'stopped')
+  } catch (error) {
+    console.error('获取TTS状态失败:', error)
+  }
+}
+
+const handleLoadModel = async () => {
+  ttsLoading.value = true
+  ttsStatus.value = 'loading'
+  try {
+    const result = await api.loadTtsModel()
+    if (result.success) {
+      ElMessage.success(result.message)
+      ttsStatus.value = 'loaded'
+    } else {
+      ElMessage.error(result.message)
+      ttsStatus.value = 'stopped'
+    }
+  } catch (error) {
+    ElMessage.error('加载模型失败')
+    ttsStatus.value = 'stopped'
+  } finally {
+    ttsLoading.value = false
+  }
+}
+
+const handleStopModel = async () => {
+  ttsLoading.value = true
+  try {
+    const result = await api.stopTtsModel()
+    if (result.success) {
+      ElMessage.success(result.message)
+      ttsStatus.value = 'stopped'
+    } else {
+      ElMessage.error(result.message)
+    }
+  } catch (error) {
+    ElMessage.error('停止模型失败')
+  } finally {
+    ttsLoading.value = false
+  }
+}
+
+const handleShutdown = async () => {
+  try {
+    const result = await api.shutdownSystem()
+    if (result.success) {
+      ElMessage.warning(result.message)
+    } else {
+      ElMessage.error(result.message)
+    }
+  } catch (error) {
+    ElMessage.error('关闭系统失败')
+  }
+}
+
 onMounted(() => {
   loadSettings()
+  fetchTtsStatus()
+  statusPollTimer = setInterval(fetchTtsStatus, 5000)
+})
+
+onUnmounted(() => {
+  if (statusPollTimer) {
+    clearInterval(statusPollTimer)
+  }
 })
 </script>
 
