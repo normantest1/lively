@@ -51,7 +51,13 @@ batch_generate_state = {
     'total_chapters': 0,    # 总章节数
     'completed_chapters': 0, # 已完成章节数
     'is_paused': False,      # 是否暂停
-    'is_stopping': False     # 是否正在停止
+    'is_stopping': False,    # 是否正在停止
+    'needs_batch_execute': False,  # 是否需要执行批量生成（RTF恢复后置为True）
+    'batch_executed_since_startup': False,  # 启动后是否已执行过批量生成
+    'pending_job_id': '',    # 待执行的job_id
+    'pending_novel_name': '', # 待执行的小说名
+    'pending_chapter_count': 0,  # 待执行的章节数
+    'pending_thread_count': 0    # 待执行的线程数
 }
 
 parse_task_lock = asyncio.Lock()
@@ -64,6 +70,12 @@ def set_server_instance(server):
     global server_instance
     server_instance = server
     log_info(f"定时任务服务已绑定server实例")
+
+def clear_server_instance():
+    """清除全局server实例（停止后调用）"""
+    global server_instance
+    server_instance = None
+    log_info("定时任务服务已解除server实例绑定")
 
 def log_info(message: str):
     """统一的信息日志"""
@@ -1143,13 +1155,15 @@ async def execute_multithread_generate_task(job_id: str, novel_name: str, chapte
         log_info(f"🏃 多线程生成任务执行器退出，任务ID: {job_id}")
 
 async def execute_watchdog_task(job_id: str, novel_name: str = '', chapter_count: int = 0, thread_count: int = 0, log_callback=None, is_recovery: bool = False, existing_completed: int = 0):
-    """执行看门狗任务 - 检测RTF值是否大于0.8
+    """执行看门狗任务
 
-    Args:
-        is_recovery: 如果为True，则跳过创建新的WatchdogTask记录，使用已存在的记录（用于服务器重启后恢复）
-        existing_completed: 恢复时已完成的章节数，用于正确累加进度
+    简化逻辑：
+    1. 第一次触发（启动后）：执行批量生成
+    2. 第二次及以后触发：跳过批量生成
+    3. RTF超标后TTS恢复，下次触发：执行批量生成
+    4. 之后的触发：跳过批量生成
     """
-    global watchdog_task_running, watchdog_current_job_id, watchdog_cancel_event, server_instance
+    global watchdog_task_running, watchdog_current_job_id, watchdog_cancel_event, server_instance, batch_generate_state
 
     log_info(f"="*80)
     log_info(f"🐕 看门狗任务触发")
@@ -1166,134 +1180,120 @@ async def execute_watchdog_task(job_id: str, novel_name: str = '', chapter_count
         await log_callback(f"[看门狗任务] 章节数: {chapter_count}\n")
         await log_callback(f"[看门狗任务] 线程数: {thread_count}\n")
 
-    lock_released = False
-    await watchdog_task_lock.acquire()
     try:
-        if watchdog_task_running:
-            log_warning(f"⚠️ 发现正在执行的看门狗任务: {watchdog_current_job_id}，新任务 {job_id} 将等待")
+        # Step 1: 检查RTF
+        log_info(f"🔍 开始RTF检测...")
+        is_high_rtf = await check_rtf_in_logs(log_callback)
+
+        rtf_handled_this_trigger = False  # 标记本次触发是否处理了RTF
+
+        if is_high_rtf:
+            log_warning(f"⚠️ RTF超过阈值，开始处理...")
             if log_callback:
-                await log_callback(f"[警告] 发现正在执行的看门狗任务: {watchdog_current_job_id}，新任务将等待\n")
-            watchdog_task_lock.release()
-            lock_released = True
-            await asyncio.sleep(2)
-            await watchdog_task_lock.acquire()
+                await log_callback(f"[RTF检测] ⚠️ RTF超过阈值，开始处理...\n")
+            # 存储参数到 batch_generate_state，供 handle_high_rtf 恢复后使用
+            batch_generate_state['pending_job_id'] = job_id
+            batch_generate_state['pending_novel_name'] = novel_name
+            batch_generate_state['pending_chapter_count'] = chapter_count
+            batch_generate_state['pending_thread_count'] = thread_count
+            log_info(f"📌 已存储RTF恢复参数: job_id={job_id}, novel={novel_name}, chapters={chapter_count}, threads={thread_count}")
+            # 立即设置 needs_batch=True（同步），确保下次触发能执行
+            # 注意：handle_high_rtf 也会设置 needs_batch，但异步执行可能来不及
+            batch_generate_state['needs_batch_execute'] = True
+            log_info(f"📌 已设置needs_batch=True，批量生成将在下次触发时执行")
+            await handle_high_rtf(log_callback)
+            rtf_handled_this_trigger = True
+        else:
+            log_info(f"✅ RTF 检查正常")
+            if log_callback:
+                await log_callback(f"[RTF检测] ✅ RTF 正常\n")
 
-        watchdog_task_running = True
-        watchdog_current_job_id = job_id
-        watchdog_cancel_event = asyncio.Event()
-
-        log_info(f"🐕 看门狗任务开始执行...")
-        if log_callback:
-            await log_callback(f"[看门狗任务] 🐕 看门狗任务开始执行...\n")
-
-        # 【重要】首先检查 scheduled_tasks 表中是否还有这个看门狗定时任务
-        # 如果没有，说明定时任务已被删除，不应该执行恢复
+        # Step 2: 检查 watchdog_auto_recovery 配置
+        auto_recovery_enabled = True
         try:
-            from bean import beans
-            ScheduledTask = beans.ScheduledTask
-            db = get_db()
-            watchdog_scheduled = ScheduledTask.select().where(
-                (ScheduledTask.job_type == 'watchdog') &
-                (ScheduledTask.job_id == job_id)
-            ).first()
+            auto_recovery_enabled = load_config(config_path, "watchdog_auto_recovery")
+            if auto_recovery_enabled is None:
+                auto_recovery_enabled = True  # 默认开启
+        except:
+            auto_recovery_enabled = True
 
-            if not watchdog_scheduled:
-                # scheduled_tasks 中没有这个看门狗定时任务，清理 watchdog_tasks 并退出
-                with db.atomic():
-                    WatchdogTask.delete().where(WatchdogTask.job_id == job_id).execute()
-                log(f"⚠️ scheduled_tasks 中无看门狗任务 {job_id}，已删除 watchdog_tasks 记录，不执行恢复")
+        log_info(f"🔍 [配置检查] watchdog_auto_recovery = {auto_recovery_enabled}")
+
+        # Step 3: 决定是否执行批量生成
+        # 注意：needs_batch_execute 在 handle_high_rtf 中设置，但批量生成在【下次触发】执行
+        # 判断依据：
+        # - needs_batch_execute = True (RTF恢复后标记) -> 执行批量生成
+        # - batch_executed_since_startup = False (启动后从未执行) AND auto_recovery = True -> 执行批量生成
+        # - 否则 -> 跳过批量生成
+        # 重要：如果本次触发处理了RTF（handle_high_rtf被调用），则【不执行】批量生成，等待下次触发
+        should_execute_batch = False
+
+        # 调试日志
+        log_info(f"🔍 [批量执行决策] job_id={job_id}, novel_name={novel_name}, rtf_handled={rtf_handled_this_trigger}, needs_batch={batch_generate_state['needs_batch_execute']}, executed_since_startup={batch_generate_state['batch_executed_since_startup']}, auto_recovery={auto_recovery_enabled}")
+
+        if rtf_handled_this_trigger:
+            # RTF恢复后，下次触发才执行批量生成，本次跳过
+            # 注意：不消耗 needs_batch，保留到下次触发
+            log_info(f"⏭️ RTF已处理，批量生成将在下次触发时执行（needs_batch保持={batch_generate_state['needs_batch_execute']}）")
+            if log_callback:
+                await log_callback(f"[看门狗] ⏭️ RTF已处理，批量生成将在下次触发时执行\n")
+        elif batch_generate_state['needs_batch_execute']:
+            # RTF恢复后的下一次触发需要执行批量生成（RTF恢复不依赖auto_recovery开关）
+            # 只有参数有效时才执行，否则保留 needs_batch
+            if novel_name and chapter_count > 0:
+                should_execute_batch = True
+                batch_generate_state['needs_batch_execute'] = False
+                log_info(f"📌 检测到RTF恢复标记，执行批量生成（needs_batch已消耗）")
+            else:
+                log_info(f"⏭️ 检测到RTF恢复标记，但参数无效（novel={novel_name}, chapters={chapter_count}），保留needs_batch")
                 if log_callback:
-                    await log_callback(f"[看门狗] ⚠️ 定时任务不存在，已清理并退出\n")
+                    await log_callback(f"[看门狗] ⏭️ RTF恢复标记已记录，等待有效参数\n")
+        elif not batch_generate_state['batch_executed_since_startup'] and auto_recovery_enabled:
+            # 启动后第一次触发 AND 自动恢复开启，执行批量生成
+            # 只有参数有效时才执行
+            if novel_name and chapter_count > 0:
+                should_execute_batch = True
+                batch_generate_state['batch_executed_since_startup'] = True
+                log_info(f"📌 检测到启动后首次触发，执行批量生成")
+            else:
+                log_info(f"⏭️ 检测到启动后首次触发，但参数无效（novel={novel_name}, chapters={chapter_count}），跳过")
+                if log_callback:
+                    await log_callback(f"[看门狗] ⏭️ 启动后首次触发参数无效，跳过\n")
+        elif auto_recovery_enabled:
+            # 自动恢复开启，但已执行过，跳过
+            log_info(f"⏭️ 已执行过批量生成，跳过本次执行")
+            if log_callback:
+                await log_callback(f"[看门狗] ⏭️ 已执行过批量生成，跳过\n")
+        else:
+            # 自动恢复关闭，跳过批量生成
+            log_info(f"⏭️ 自动恢复已关闭，跳过批量生成")
+            if log_callback:
+                await log_callback(f"[看门狗] ⏭️ 自动恢复已关闭，跳过批量生成\n")
 
-                watchdog_task_running = False
-                watchdog_current_job_id = None
-                watchdog_cancel_event = None
-                return
-        except Exception as e:
-            log_error(f"检查 scheduled_tasks 失败: {e}")
-
-        # 检查是否需要恢复任务（数据库中已有 is_running=True 的记录）
-        recovery_mode = False
-        existing_completed = 0
-        remaining_chapters = chapter_count
-        if novel_name and chapter_count > 0:
-            try:
-                db = get_db()
-                existing_task = WatchdogTask.select().where(
-                    (WatchdogTask.job_id == job_id) &
-                    (WatchdogTask.is_running == True)
-                ).first()
-
-                if existing_task:
-                    # 数据库中有恢复记录，使用恢复模式
-                    recovery_mode = True
-                    existing_completed = existing_task.completed_chapters
-                    remaining_chapters = existing_task.total_chapters - existing_task.completed_chapters
-                    log_info(f"🔄 发现恢复记录: job_id={job_id}, 已完成 {existing_completed} 章，剩余 {remaining_chapters} 章")
-                    if log_callback:
-                        await log_callback(f"[看门狗任务] 🔄 恢复任务: 已完成 {existing_completed} 章，剩余 {remaining_chapters} 章\n")
-            except Exception as e:
-                log_error(f"查询恢复记录失败: {e}")
-
-        # 创建看门狗任务记录到数据库
-        if novel_name and chapter_count > 0 and not is_recovery and not recovery_mode:
-            # 只有在新任务时才创建记录，恢复任务时跳过
-            try:
-                db = get_db()
-                with db.atomic():
-                    # 删除旧的任务记录（如果存在）
-                    WatchdogTask.delete().where(WatchdogTask.job_id == job_id).execute()
-                    # 创建新记录
-                    WatchdogTask.create(
-                        job_id=job_id,
-                        novel_name=novel_name,
-                        thread_count=thread_count,
-                        total_chapters=chapter_count,
-                        completed_chapters=0,
-                        is_running=True
-                    )
-                log_info(f"🐕 已创建看门狗任务记录: job_id={job_id}, novel_name={novel_name}, total_chapters={chapter_count}")
-            except Exception as e:
-                log_error(f"创建看门狗任务记录失败: {e}")
-
-        if novel_name and chapter_count > 0:
+        # Step 3: 执行批量生成（如果需要）
+        if should_execute_batch and novel_name and chapter_count > 0:
             log_info(f"🐕 开始执行多线程生成音频任务...")
             if log_callback:
                 await log_callback(f"[看门狗任务] 🐕 开始执行多线程生成音频任务...\n")
 
-            # 确定执行参数：恢复模式用剩余章节数，否则用原始章节数
-            actual_chapter_count = remaining_chapters if recovery_mode else chapter_count
-
             await execute_multithread_generate_task(
                 job_id=job_id,
                 novel_name=novel_name,
-                chapter_count=actual_chapter_count,
+                chapter_count=chapter_count,
                 thread_count=thread_count,
                 log_callback=log_callback,
-                existing_completed=existing_completed  # 恢复时传递已完成的章节数
+                existing_completed=0
             )
 
             log_info(f"🐕 多线程生成音频任务执行完成")
             if log_callback:
                 await log_callback(f"[看门狗任务] 🐕 多线程生成音频任务执行完成\n")
 
-        # 检查RTF并处理
-        is_high_rtf = await check_rtf_in_logs(log_callback)
-        if is_high_rtf:
-            await handle_high_rtf(log_callback)
-        else:
-            log_info(f"✅ RTF 检查正常")
-            if log_callback:
-                await log_callback(f"[RTF检查] ✅ RTF 正常，继续监控...\n")
-
         log_info(f"🐕 看门狗任务执行完成")
         if log_callback:
             await log_callback(f"[看门狗任务] 🐕 看门狗任务执行完成\n")
 
         log_success(f"="*80)
-        log_success(f"🐕 看门狗任务执行成功")
-        log_success(f"="*80)
-
         return True
 
     except asyncio.CancelledError:
@@ -1303,29 +1303,10 @@ async def execute_watchdog_task(job_id: str, novel_name: str = '', chapter_count
         raise
     except Exception as e:
         log_error(f"❌ 看门狗任务执行失败: {e}")
+        traceback.print_exc()
         if log_callback:
             await log_callback(f"[看门狗任务] ❌ 看门狗任务执行失败: {e}\n")
         return False
-    finally:
-        if not lock_released and watchdog_task_lock.locked():
-            watchdog_task_lock.release()
-            lock_released = True
-        if watchdog_current_job_id == job_id:
-            watchdog_task_running = False
-            watchdog_current_job_id = None
-            watchdog_cancel_event = None
-        # 更新看门狗任务记录为非运行状态
-        try:
-            db = get_db()
-            with db.atomic():
-                WatchdogTask.update(
-                    is_running=False,
-                    update_time=datetime.datetime.now()
-                ).where(WatchdogTask.job_id == job_id).execute()
-            log_info(f"🐕 已更新看门狗任务记录为完成状态: job_id={job_id}")
-        except Exception as e:
-            log_error(f"更新看门狗任务记录失败: {e}")
-        log_info(f"🏃 看门狗任务执行器退出，任务ID: {job_id}")
 
 async def check_rtf_in_logs(log_callback=None) -> bool:
     """检查日志文件中的RTF值，返回是否发现高RTF (>threshold)"""
@@ -1373,7 +1354,6 @@ async def check_rtf_in_logs(log_callback=None) -> bool:
             await log_callback(f"[看门狗任务] 📊 检查最后 {len(last_n_lines)} 行日志...\n")
 
         rtf_pattern = re.compile(r'RTF[：:]\s*([\d.]+)')
-
         for line in last_n_lines:
             match = rtf_pattern.search(line)
             if match:
@@ -1396,7 +1376,9 @@ async def check_rtf_in_logs(log_callback=None) -> bool:
                     print(f"日志内容: {line_stripped}")
                     print(f"RTF值: {rtf_value}")
                     print(f"{'='*80}\n")
-
+        if found_high_rtf:
+            for i in range(0,len(last_n_lines)):
+                log_info(f"发现RTF大于{rtf_threshold},为防止TTS模型重启后再次读到旧日志，将日志填充中，行数：{str(i+1)}")
         if not found_high_rtf:
             log_info(f"✅ 未发现RTF大于{rtf_threshold}的日志")
             if log_callback:
@@ -1487,6 +1469,43 @@ async def handle_high_rtf(log_callback=None):
             log_info(f"🔄 恢复批量生成任务...")
             if log_callback:
                 await log_callback(f"[RTF处理] 🔄 恢复批量生成任务...\n")
+
+        # 9. 使用存储的参数直接执行批量生成
+        pending_job_id = batch_generate_state.get('pending_job_id', '')
+        pending_novel_name = batch_generate_state.get('pending_novel_name', '')
+        pending_chapter_count = batch_generate_state.get('pending_chapter_count', 0)
+        pending_thread_count = batch_generate_state.get('pending_thread_count', 0)
+
+        if pending_novel_name and pending_chapter_count > 0:
+            log_info(f"📌 RTF恢复后直接执行批量生成: novel={pending_novel_name}, chapters={pending_chapter_count}, threads={pending_thread_count}")
+            if log_callback:
+                await log_callback(f"[RTF处理] 📌 RTF恢复后直接执行批量生成\n")
+
+            # 直接执行批量生成任务
+            await execute_multithread_generate_task(
+                job_id=pending_job_id,
+                novel_name=pending_novel_name,
+                chapter_count=pending_chapter_count,
+                thread_count=pending_thread_count,
+                log_callback=log_callback,
+                existing_completed=0
+            )
+
+            log_info(f"📌 RTF恢复后的批量生成任务执行完成")
+            if log_callback:
+                await log_callback(f"[RTF处理] 📌 RTF恢复后的批量生成任务执行完成\n")
+
+            # 清理存储的参数
+            batch_generate_state['pending_job_id'] = ''
+            batch_generate_state['pending_novel_name'] = ''
+            batch_generate_state['pending_chapter_count'] = 0
+            batch_generate_state['pending_thread_count'] = 0
+        else:
+            # 如果没有存储的参数，标记需要下次触发时执行
+            batch_generate_state['needs_batch_execute'] = True
+            log_info(f"📌 已标记需要执行批量生成，下次触发将执行")
+            if log_callback:
+                await log_callback(f"[RTF处理] 📌 已标记需要执行批量生成，下次触发将执行\n")
 
     except Exception as e:
         log_error(f"❌ 处理 RTF 失败: {e}")
@@ -1799,12 +1818,14 @@ def add_watchdog_job(job_id: str, cron: str, novel_name: str = '', chapter_count
             trigger=trigger,
             id=job_id,
             name=f"看门狗任务_{novel_name}",
-            # Cron触发时只检查RTF，不执行生成，所以传空值
-            args=[job_id, '', 0, 0],
+            # 传递真实参数，以便RTF恢复后cron能执行批量生成
+            args=[job_id, novel_name, chapter_count, thread_count],
             replace_existing=True
         )
 
         # 立即执行一次生成任务（不等待 cron）
+        # 注意：强制设置 needs_batch_execute=True，确保新任务会执行一次
+        batch_generate_state['needs_batch_execute'] = True
         log_info(f"🐕 立即开始执行批量生成任务...")
         try:
             loop = asyncio.get_event_loop()
