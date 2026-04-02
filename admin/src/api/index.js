@@ -228,5 +228,19 @@ export default {
         current_state: currentState
       }
     }).then(res => res.data)
+  },
+
+  // TTS Model APIs
+  getTtsStatus() {
+    return apiClient.get('/tts/status').then(res => res.data)
+  },
+  loadTtsModel() {
+    return apiClient.post('/tts/load').then(res => res.data)
+  },
+  stopTtsModel() {
+    return apiClient.post('/tts/stop').then(res => res.data)
+  },
+  shutdownSystem() {
+    return apiClient.post('/system/shutdown').then(res => res.data)
   }
 }
