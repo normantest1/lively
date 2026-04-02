@@ -56,3 +56,11 @@ See: .planning/PROJECT.md (updated 2026-03-30)
 - **2026-03-31**: Phase 3 Plan 01 completed — Added watchdog config keys to lively_config.json, WatchdogTask model in bean/beans.py, extended SettingsRequest and get_default_settings in api.py
 - **2026-03-31**: Phase 3 Plan 02 completed — Added watchdog settings UI to SettingsView.vue with RTF threshold, wait times, and auto-recovery switch; Updated scheduler_tasks.py to read all watchdog parameters from config
 - **2026-03-31**: Phase 3 Plan 03 completed — Implemented WatchdogTask persistence during task execution, temp/*.wav cleanup on startup, WebSocket recovery notifications, and runtime switch-off handling
+
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Status | Directory |
+|---|-------------|------|--------|--------|-----------|
+| 260402-m5l | 添加TTS模型控制按钮 | 2026-04-02 | 9aa9ec0 | Verified | [260402-m5l-tts](./quick/260402-m5l-tts/) |
+
+Last activity: 2026-04-02 - Completed quick task 260402-m5l: 添加TTS模型控制按钮
