@@ -19,6 +19,7 @@ from typing import List, Optional
 from peewee import *
 import datetime
 import json
+import asyncio
 
 from generate_audio import update_audio_role, load_role_audio, generate_chapter_audio
 from parse_text import async_parse_text, parse_novel_data_bind_role_audio
@@ -39,6 +40,7 @@ from scheduler_tasks import (
     execute_generate_task,
     execute_multithread_generate_task,
     set_server_instance,
+    clear_server_instance,
     stop_scheduler,
     get_task_details,
     get_all_task_details,
@@ -169,6 +171,7 @@ class RoleAudioResponse(RoleAudioBase):
 
     model_config = ConfigDict(from_attributes=True)
 server = ""
+model_lock = asyncio.Lock()
 
 # ============ 看门狗启动恢复功能 ============
 def cleanup_temp_wavs():
@@ -296,6 +299,72 @@ async def restore_watchdog_tasks():
             log(f"🐕 已启动恢复任务: job_id={task.job_id}, 剩余 {remaining_chapters} 章 (已完成 {task.completed_chapters} 章)")
         except Exception as e:
             log_error(f"❌ 恢复看门狗任务失败: {e}")
+
+# ============ TTS 模型控制接口 ============
+@app.get("/api/tts/status")
+async def get_tts_status():
+    """返回TTS模型状态"""
+    return {
+        "loaded": server != "",
+        "model_name": "VoxCPM1.5",
+        "status": "loaded" if server != "" else "stopped"
+    }
+
+@app.post("/api/tts/load")
+async def load_tts_model():
+    """加载TTS模型"""
+    global server
+    async with model_lock:
+        if server != "":
+            return {"success": True, "message": "模型已在运行", "status": "loaded"}
+        try:
+            # 运行阻塞模型加载在独立线程中，避免阻塞事件循环
+            server = await asyncio.to_thread(
+                VoxCPM.from_pretrained,
+                "./VoxCPM1.5/",
+                max_num_batched_tokens=8192,
+                max_num_seqs=16,
+                max_model_len=4096,
+                gpu_memory_utilization=0.95,
+                enforce_eager=False,
+                devices=[0]
+            )
+            set_server_instance(server)
+            return {"success": True, "message": "模型加载完成", "status": "loaded"}
+        except Exception as e:
+            log_error(f"模型加载失败: {e}")
+            return {"success": False, "message": f"模型加载失败: {str(e)}", "status": "stopped"}
+
+@app.post("/api/tts/stop")
+async def stop_tts_model():
+    """停止TTS模型"""
+    global server
+    async with model_lock:
+        if server == "":
+            return {"success": True, "message": "模型已停止", "status": "stopped"}
+        try:
+            await server.stop()
+            server = ""
+            clear_server_instance()
+            return {"success": True, "message": "模型已停止，GPU内存已释放", "status": "stopped"}
+        except Exception as e:
+            log_error(f"模型停止失败: {e}")
+            return {"success": False, "message": f"模型停止失败: {str(e)}", "status": "loaded"}
+
+@app.post("/api/system/shutdown")
+async def shutdown_system():
+    """关闭系统（先停止模型，然后通知用户手动关闭uvicorn）"""
+    global server
+    async with model_lock:
+        try:
+            if server != "":
+                await server.stop()
+                server = ""
+                clear_server_instance()
+            return {"success": True, "message": "模型已停止。请使用 Ctrl+C 或关闭终端停止 uvicorn 进程", "will_exit": False}
+        except Exception as e:
+            log_error(f"系统关闭失败: {e}")
+            return {"success": False, "message": f"系统关闭失败: {str(e)}", "will_exit": False}
 
 # ============ FastAPI 应用 ============
 @asynccontextmanager
