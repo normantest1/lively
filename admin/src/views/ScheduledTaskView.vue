@@ -35,8 +35,13 @@
                   filterable
                   placeholder="请选择小说名"
                   style="width: 400px"
+                  :disabled="parseForm.novel_name === ''"
                   @change="handleParseNovelChange"
                 >
+                  <el-option
+                    label="全部解析"
+                    value=""
+                  />
                   <el-option
                     v-for="item in novelNamesList"
                     :key="item.id"
@@ -44,6 +49,12 @@
                     :value="item.novel_name"
                   />
                 </el-select>
+                <span
+                  v-if="parseForm.novel_name === ''"
+                  style="margin-left: 10px; color: #909399; font-size: 12px;"
+                >
+                  已选择全部解析
+                </span>
               </el-form-item>
               
               <el-form-item label="需要解析的章节">
@@ -151,6 +162,160 @@
                   style="margin-left: 20px"
                 >
                   {{ generateTaskStatus.running ? '任务执行中' : '空闲' }}
+                </el-tag>
+              </el-form-item>
+            </el-form>
+          </el-card>
+        </el-tab-pane>
+
+        <el-tab-pane label="定时多线程生成音频（测试）" name="multithread_generate">
+          <el-card class="task-card">
+            <template #header>
+              <span>定时多线程生成音频（测试）设置</span>
+            </template>
+            <el-form :model="multithreadForm" label-width="140px">
+              <el-form-item label="Cron表达式">
+                <el-input
+                  v-model="multithreadForm.cron"
+                  placeholder="0 * * * * * * (秒 分 时 日 月 周 年)"
+                  style="width: 400px"
+                />
+                <el-tooltip content="格式：秒 分 时 日 月 周 年，例如：0 0/5 * * * * * 表示每五分钟执行">
+                  <el-icon style="margin-left: 8px; cursor: pointer;"><QuestionFilled /></el-icon>
+                </el-tooltip>
+              </el-form-item>
+              
+              <el-form-item label="小说名">
+                <el-select
+                  v-model="multithreadForm.novel_name"
+                  filterable
+                  placeholder="请选择小说名"
+                  style="width: 400px"
+                  @change="handleMultithreadNovelChange"
+                >
+                  <el-option
+                    v-for="item in novelNamesList"
+                    :key="item.id"
+                    :label="item.novel_name"
+                    :value="item.novel_name"
+                  />
+                </el-select>
+              </el-form-item>
+              
+              <el-form-item label="需要生成的章节">
+                <el-input-number
+                  v-model="multithreadForm.chapter_count"
+                  :min="1"
+                  :max="multithreadForm.max_chapters > 0 ? multithreadForm.max_chapters : undefined"
+                  style="width: 300px"
+                />
+                <el-button 
+                  type="primary" 
+                  style="margin-left: 10px"
+                  @click="handleSetMultithreadMax"
+                  :disabled="!multithreadForm.novel_name"
+                >
+                  最大
+                </el-button>
+                <span style="margin-left: 10px; color: #909399;">
+                  最大可生成章节数：{{ multithreadForm.max_chapters }}
+                </span>
+              </el-form-item>
+              
+              <el-form-item label="多线程数量">
+                <el-input-number
+                  v-model="multithreadForm.thread_count"
+                  :min="1"
+                  :max="32"
+                  style="width: 300px"
+                />
+              </el-form-item>
+              
+              <el-form-item>
+                <el-button type="primary" @click="handleSetMultithreadTask">设置</el-button>
+                <el-button type="danger" @click="handleDeleteMultithreadTask">删除任务</el-button>
+                <el-tag 
+                  :type="multithreadTaskStatus.running ? 'warning' : 'success'"
+                  style="margin-left: 20px"
+                >
+                  {{ multithreadTaskStatus.running ? '任务执行中' : '空闲' }}
+                </el-tag>
+              </el-form-item>
+            </el-form>
+          </el-card>
+        </el-tab-pane>
+
+        <el-tab-pane label="批量生成看门狗（测试）" name="watchdog">
+          <el-card class="task-card">
+            <template #header>
+              <span>批量生成看门狗（测试）设置</span>
+            </template>
+            <el-form :model="watchdogForm" label-width="140px">
+              <el-form-item label="Cron表达式">
+                <el-input
+                  v-model="watchdogForm.cron"
+                  placeholder="0 * * * * * * (秒 分 时 日 月 周 年)"
+                  style="width: 400px"
+                />
+                <el-tooltip content="格式：秒 分 时 日 月 周 年，例如：0 */5 * * * * * 表示每5分钟执行">
+                  <el-icon style="margin-left: 8px; cursor: pointer;"><QuestionFilled /></el-icon>
+                </el-tooltip>
+              </el-form-item>
+
+              <el-form-item label="小说名">
+                <el-select
+                  v-model="watchdogForm.novel_name"
+                  filterable
+                  placeholder="请选择小说名"
+                  style="width: 400px"
+                  @change="handleWatchdogNovelChange"
+                >
+                  <el-option
+                    v-for="item in novelNamesList"
+                    :key="item.id"
+                    :label="item.novel_name"
+                    :value="item.novel_name"
+                  />
+                </el-select>
+              </el-form-item>
+
+              <el-form-item label="需要生成的章节">
+                <el-input-number
+                  v-model="watchdogForm.chapter_count"
+                  :min="1"
+                  :max="watchdogForm.max_chapters > 0 ? watchdogForm.max_chapters : undefined"
+                  style="width: 300px"
+                />
+                <el-button
+                  type="primary"
+                  style="margin-left: 10px"
+                  @click="handleSetWatchdogMax"
+                  :disabled="!watchdogForm.novel_name"
+                >
+                  最大
+                </el-button>
+                <span style="margin-left: 10px; color: #909399;">
+                  最大可生成章节数：{{ watchdogForm.max_chapters }}
+                </span>
+              </el-form-item>
+
+              <el-form-item label="线程数">
+                <el-input-number
+                  v-model="watchdogForm.thread_count"
+                  :min="1"
+                  :max="32"
+                  style="width: 300px"
+                />
+              </el-form-item>
+
+              <el-form-item>
+                <el-button type="primary" @click="handleSetWatchdogTask">添加</el-button>
+                <el-button type="danger" @click="handleDeleteWatchdogTask">删除任务</el-button>
+                <el-tag
+                  :type="watchdogTaskStatus.running ? 'warning' : 'success'"
+                  style="margin-left: 20px"
+                >
+                  {{ watchdogTaskStatus.running ? '任务执行中' : '空闲' }}
                 </el-tag>
               </el-form-item>
             </el-form>
@@ -270,11 +435,35 @@ const generateForm = reactive({
   max_chapters: 0
 })
 
+const multithreadForm = reactive({
+  cron: '0 0 4 * * * *',
+  novel_name: '',
+  chapter_count: 10,
+  thread_count: 4,
+  max_chapters: 0
+})
+
 const parseTaskStatus = reactive({
   running: false
 })
 
 const generateTaskStatus = reactive({
+  running: false
+})
+
+const multithreadTaskStatus = reactive({
+  running: false
+})
+
+const watchdogForm = reactive({
+  cron: '0 */5 * * * * *',
+  novel_name: '',
+  chapter_count: 10,
+  thread_count: 2,
+  max_chapters: 0
+})
+
+const watchdogTaskStatus = reactive({
   running: false
 })
 
@@ -337,6 +526,107 @@ const loadGenerateTaskStatus = async () => {
   }
 }
 
+const loadMultithreadTaskStatus = async () => {
+  try {
+    const response = await api.getMultithreadGenerateTaskStatus()
+    multithreadTaskStatus.running = response.running
+  } catch (error) {
+    console.error('获取多线程生成任务状态失败:', error)
+  }
+}
+
+const loadWatchdogTaskStatus = async () => {
+  try {
+    const response = await api.getWatchdogTaskStatus()
+    watchdogTaskStatus.running = response.running
+  } catch (error) {
+    console.error('获取看门狗任务状态失败:', error)
+  }
+}
+
+const handleWatchdogNovelChange = async () => {
+  if (watchdogForm.novel_name) {
+    try {
+      const response = await api.getMaxChapters(watchdogForm.novel_name, 2)
+      watchdogForm.max_chapters = response.max_chapters
+      watchdogForm.chapter_count = Math.min(watchdogForm.chapter_count, watchdogForm.max_chapters)
+    } catch (error) {
+      console.error('获取最大章节数失败:', error)
+      watchdogForm.max_chapters = 0
+    }
+  } else {
+    watchdogForm.max_chapters = 0
+  }
+}
+
+const handleSetWatchdogMax = () => {
+  if (watchdogForm.max_chapters) {
+    watchdogForm.chapter_count = watchdogForm.max_chapters
+  }
+}
+
+const handleSetWatchdogTask = async () => {
+  if (!watchdogForm.cron) {
+    ElMessage.warning('请填写Cron表达式')
+    return
+  }
+
+  if (!watchdogForm.novel_name) {
+    ElMessage.warning('请选择小说名')
+    return
+  }
+
+  try {
+    const response = await api.createScheduledWatchdogTask({
+      job_id: `watchdog_${watchdogForm.novel_name}`,
+      cron: watchdogForm.cron,
+      novel_name: watchdogForm.novel_name,
+      chapter_count: watchdogForm.chapter_count,
+      thread_count: watchdogForm.thread_count
+    })
+
+    if (response.status === 'success') {
+      ElMessage.success('看门狗任务设置成功')
+      await loadScheduledJobs()
+    } else {
+      ElMessage.error('看门狗任务设置失败')
+    }
+  } catch (error) {
+    console.error('设置看门狗任务失败:', error)
+    ElMessage.error('设置看门狗任务失败')
+  }
+}
+
+const handleDeleteWatchdogTask = async () => {
+  if (!watchdogForm.novel_name) {
+    ElMessage.warning('请先选择小说名')
+    return
+  }
+
+  const jobId = `watchdog_${watchdogForm.novel_name}`
+
+  try {
+    await ElMessageBox.confirm('确定要删除看门狗任务吗?', '提示', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    })
+
+    const response = await api.deleteScheduledTask(jobId)
+    if (response.status === 'success') {
+      ElMessage.success('看门狗任务删除成功')
+      await loadScheduledJobs()
+    } else {
+      ElMessage.error('看门狗任务删除失败')
+    }
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('删除看门狗任务失败:', error)
+      ElMessage.error('删除看门狗任务失败')
+    }
+  }
+}
+
 const handleParseNovelChange = async () => {
   if (parseForm.novel_name) {
     try {
@@ -367,12 +657,31 @@ const handleGenerateNovelChange = async () => {
   }
 }
 
+const handleMultithreadNovelChange = async () => {
+  if (multithreadForm.novel_name) {
+    try {
+      const response = await api.getMaxChapters(multithreadForm.novel_name, 2)
+      multithreadForm.max_chapters = response.max_chapters
+      multithreadForm.chapter_count = Math.min(multithreadForm.chapter_count, multithreadForm.max_chapters)
+    } catch (error) {
+      console.error('获取最大章节数失败:', error)
+      multithreadForm.max_chapters = 0
+    }
+  } else {
+    multithreadForm.max_chapters = 0
+  }
+}
+
 const handleSetParseMax = () => {
   parseForm.chapter_count = parseForm.max_chapters
 }
 
 const handleSetGenerateMax = () => {
   generateForm.chapter_count = generateForm.max_chapters
+}
+
+const handleSetMultithreadMax = () => {
+  multithreadForm.chapter_count = multithreadForm.max_chapters
 }
 
 const handleSetParseTask = async () => {
@@ -425,6 +734,33 @@ const handleSetGenerateTask = async () => {
   } catch (error) {
     console.error('设置定时生成任务失败:', error)
     ElMessage.error('设置定时生成任务失败')
+  }
+}
+
+const handleSetMultithreadTask = async () => {
+  if (!multithreadForm.cron || !multithreadForm.novel_name) {
+    ElMessage.warning('请填写完整信息')
+    return
+  }
+  
+  try {
+    const response = await api.createScheduledMultithreadGenerateTask({
+      job_id: `multithread_generate_${multithreadForm.novel_name}`,
+      cron: multithreadForm.cron,
+      novel_name: multithreadForm.novel_name,
+      chapter_count: multithreadForm.chapter_count,
+      thread_count: multithreadForm.thread_count
+    })
+    
+    if (response.status === 'success') {
+      ElMessage.success('定时多线程生成音频任务设置成功')
+      await loadScheduledJobs()
+    } else {
+      ElMessage.error('定时多线程生成音频任务设置失败')
+    }
+  } catch (error) {
+    console.error('设置定时多线程生成音频任务失败:', error)
+    ElMessage.error('设置定时多线程生成音频任务失败')
   }
 }
 
@@ -482,6 +818,35 @@ const handleDeleteGenerateTask = async () => {
     if (error !== 'cancel') {
       console.error('删除定时生成任务失败:', error)
       ElMessage.error('删除定时生成任务失败')
+    }
+  }
+}
+
+const handleDeleteMultithreadTask = async () => {
+  const jobId = `multithread_generate_${multithreadForm.novel_name}`
+  if (!multithreadForm.novel_name) {
+    ElMessage.warning('请先选择小说')
+    return
+  }
+  
+  try {
+    await ElMessageBox.confirm('确定要删除该定时多线程生成音频任务吗?', '提示', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    })
+    
+    const response = await api.deleteScheduledTask(jobId)
+    if (response.status === 'success') {
+      ElMessage.success('定时多线程生成音频任务删除成功')
+      await loadScheduledJobs()
+    } else {
+      ElMessage.error('定时多线程生成音频任务删除失败')
+    }
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('删除定时多线程生成音频任务失败:', error)
+      ElMessage.error('删除定时多线程生成音频任务失败')
     }
   }
 }
@@ -586,10 +951,14 @@ onMounted(async () => {
   await loadScheduledJobs()
   await loadParseTaskStatus()
   await loadGenerateTaskStatus()
-  
+  await loadMultithreadTaskStatus()
+  await loadWatchdogTaskStatus()
+
   setInterval(async () => {
     await loadParseTaskStatus()
     await loadGenerateTaskStatus()
+    await loadMultithreadTaskStatus()
+    await loadWatchdogTaskStatus()
   }, 5000)
 })
 

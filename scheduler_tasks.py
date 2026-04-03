@@ -326,10 +326,15 @@ async def execute_parse_task(job_id: str, novel_name: str, chapter_count: int, t
 
         log_info(f"正在查询待解析的小说章节 (current_state=1)...")
         db = get_db()
-        novels_to_parse = Novel.select().where(
-            Novel.novel_name == novel_name,
-            Novel.current_state == 1
-        ).limit(chapter_count)
+        if novel_name:
+            novels_to_parse = Novel.select().where(
+                Novel.novel_name == novel_name,
+                Novel.current_state == 1
+            ).limit(chapter_count)
+        else:
+            novels_to_parse = Novel.select().where(
+                Novel.current_state == 1
+            ).order_by(Novel.create_time.asc()).limit(chapter_count)
 
         novel_list = list(novels_to_parse)
         total_count = len(novel_list)
@@ -1524,7 +1529,7 @@ def add_parse_job(job_id: str, cron: str, novel_name: str, chapter_count: int, t
             execute_parse_task,
             trigger=trigger,
             id=job_id,
-            name=f"定时解析任务_{novel_name}",
+            name=f"定时解析任务_{novel_name or '全部'}",
             args=[job_id, novel_name, chapter_count, thread_count],
             replace_existing=True
         )
