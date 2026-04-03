@@ -62,5 +62,6 @@ See: .planning/PROJECT.md (updated 2026-03-30)
 | # | Description | Date | Commit | Status | Directory |
 |---|-------------|------|--------|--------|-----------|
 | 260402-m5l | 添加TTS模型控制按钮 | 2026-04-02 | 9aa9ec0 | Verified | [260402-m5l-tts](./quick/260402-m5l-tts/) |
+| 260403-msj | 添加全部小说解析功能 | 2026-04-03 | ec2dfe0 | Verified | [260403-msj](./quick/260403-msj/) |
 
-Last activity: 2026-04-02 - Completed quick task 260402-m5l: 添加TTS模型控制按钮
+Last activity: 2026-04-03 - Completed quick task 260403-msj: 添加全部小说解析功能
