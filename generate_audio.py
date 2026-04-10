@@ -1,4 +1,4 @@
-
+import threading
 import os
 from pathlib import Path
 from struct import pack_into
@@ -27,6 +27,8 @@ import asyncio
 import time
 import traceback
 import queue
+remove_silence_lock = threading.Lock()
+
 def remove_silence_from_audio(
     input_path: str,
     output_path: str,
@@ -36,6 +38,8 @@ def remove_silence_from_audio(
 ) -> dict:
     """
     删除音频中的长静音部分，保留短停顿
+    
+    支持多线程并发调用，每个调用使用独立的资源
 
     参数:
         input_path (str): 输入音频文件路径（支持 .wav, .mp3, .ogg, .flac, .m4a 等格式）
@@ -55,110 +59,111 @@ def remove_silence_from_audio(
             - removed_count (int): 删除的静音段数量
             - message (str): 处理信息或错误信息
     """
-    try:
-        # 检查输入文件是否存在
-        if not os.path.exists(input_path):
+    with remove_silence_lock:
+        try:
+            # 检查输入文件是否存在
+            if not os.path.exists(input_path):
+                return {
+                    "success": False,
+                    "original_duration": 0,
+                    "processed_duration": 0,
+                    "removed_duration": 0,
+                    "removed_count": 0,
+                    "message": f"输入文件不存在: {input_path}"
+                }
+
+            # 获取文件扩展名
+            file_ext = os.path.splitext(input_path)[1].lower()
+
+            # 加载音频
+            audio = AudioSegment.from_file(input_path)
+
+            # 记录原始时长
+            original_duration = len(audio) / 1000.0
+
+            # 检测非静音部分
+            nonsilent_ranges = detect_nonsilent(
+                audio,
+                min_silence_len=100,  # 使用较小的值检测所有可能的静音
+                silence_thresh=silence_thresh
+            )
+
+            # 如果没有检测到非静音部分，直接返回原始音频
+            if not nonsilent_ranges:
+                audio.export(output_path, format=file_ext[1:] if file_ext else 'wav')
+                return {
+                    "success": True,
+                    "original_duration": original_duration,
+                    "processed_duration": original_duration,
+                    "removed_duration": 0,
+                    "removed_count": 0,
+                    "message": "未检测到非静音部分，保持原始音频"
+                }
+
+            # 构建处理后的音频
+            processed_audio = AudioSegment.empty()
+            removed_count = 0
+            total_removed_duration = 0
+
+            for i, (start_ms, end_ms) in enumerate(nonsilent_ranges):
+                # 添加当前非静音片段
+                chunk = audio[start_ms:end_ms]
+                processed_audio += chunk
+
+                # 计算下一个非静音片段之前的静音长度
+                if i < len(nonsilent_ranges) - 1:
+                    next_start_ms = nonsilent_ranges[i + 1][0]
+                    silence_duration = next_start_ms - end_ms
+
+                    # 判断是否为长静音
+                    if silence_duration >= min_silence_len:
+                        # 长静音：压缩到保留的短静音长度
+                        if keep_short_silence > 0:
+                            silence = AudioSegment.silent(duration=keep_short_silence)
+                            processed_audio += silence
+                            removed_duration = (silence_duration - keep_short_silence) / 1000.0
+                        else:
+                            removed_duration = silence_duration / 1000.0
+
+                        total_removed_duration += removed_duration
+                        removed_count += 1
+                    else:
+                        # 短静音：保留原样
+                        silence = AudioSegment.silent(duration=silence_duration)
+                        processed_audio += silence
+
+            # 确保输出目录存在
+            output_dir = os.path.dirname(output_path)
+            if output_dir and not os.path.exists(output_dir):
+                os.makedirs(output_dir, exist_ok=True)
+
+            # 导出处理后的音频
+            export_format = file_ext[1:] if file_ext else 'wav'
+            processed_audio.export(output_path, format=export_format)
+
+            # 计算统计信息
+            processed_duration = len(processed_audio) / 1000.0
+
+            return {
+                "success": True,
+                "original_duration": original_duration,
+                "processed_duration": processed_duration,
+                "removed_duration": total_removed_duration,
+                "removed_count": removed_count,
+                "message": f"成功处理，删除了 {removed_count} 处长静音（共 {total_removed_duration:.2f} 秒），保留了短停顿"
+            }
+
+        except Exception as e:
+            log_error(f"remove_silence_from_audio 处理音频时出错 (input_path={input_path}, output_path={output_path}): {str(e)}")
+            traceback.print_exc()
             return {
                 "success": False,
                 "original_duration": 0,
                 "processed_duration": 0,
                 "removed_duration": 0,
                 "removed_count": 0,
-                "message": f"输入文件不存在: {input_path}"
+                "message": f"处理音频时出错: {str(e)}"
             }
-
-        # 获取文件扩展名
-        file_ext = os.path.splitext(input_path)[1].lower()
-
-        # 加载音频
-        audio = AudioSegment.from_file(input_path)
-
-        # 记录原始时长
-        original_duration = len(audio) / 1000.0
-
-        # 检测非静音部分
-        nonsilent_ranges = detect_nonsilent(
-            audio,
-            min_silence_len=100,  # 使用较小的值检测所有可能的静音
-            silence_thresh=silence_thresh
-        )
-
-        # 如果没有检测到非静音部分，直接返回原始音频
-        if not nonsilent_ranges:
-            audio.export(output_path, format=file_ext[1:] if file_ext else 'wav')
-            return {
-                "success": True,
-                "original_duration": original_duration,
-                "processed_duration": original_duration,
-                "removed_duration": 0,
-                "removed_count": 0,
-                "message": "未检测到非静音部分，保持原始音频"
-            }
-
-        # 构建处理后的音频
-        processed_audio = AudioSegment.empty()
-        removed_count = 0
-        total_removed_duration = 0
-
-        for i, (start_ms, end_ms) in enumerate(nonsilent_ranges):
-            # 添加当前非静音片段
-            chunk = audio[start_ms:end_ms]
-            processed_audio += chunk
-
-            # 计算下一个非静音片段之前的静音长度
-            if i < len(nonsilent_ranges) - 1:
-                next_start_ms = nonsilent_ranges[i + 1][0]
-                silence_duration = next_start_ms - end_ms
-
-                # 判断是否为长静音
-                if silence_duration >= min_silence_len:
-                    # 长静音：压缩到保留的短静音长度
-                    if keep_short_silence > 0:
-                        silence = AudioSegment.silent(duration=keep_short_silence)
-                        processed_audio += silence
-                        removed_duration = (silence_duration - keep_short_silence) / 1000.0
-                    else:
-                        removed_duration = silence_duration / 1000.0
-
-                    total_removed_duration += removed_duration
-                    removed_count += 1
-                else:
-                    # 短静音：保留原样
-                    silence = AudioSegment.silent(duration=silence_duration)
-                    processed_audio += silence
-
-        # 确保输出目录存在
-        output_dir = os.path.dirname(output_path)
-        if output_dir and not os.path.exists(output_dir):
-            os.makedirs(output_dir, exist_ok=True)
-
-        # 导出处理后的音频
-        export_format = file_ext[1:] if file_ext else 'wav'
-        processed_audio.export(output_path, format=export_format)
-
-        # 计算统计信息
-        processed_duration = len(processed_audio) / 1000.0
-
-        return {
-            "success": True,
-            "original_duration": original_duration,
-            "processed_duration": processed_duration,
-            "removed_duration": total_removed_duration,
-            "removed_count": removed_count,
-            "message": f"成功处理，删除了 {removed_count} 处长静音（共 {total_removed_duration:.2f} 秒），保留了短停顿"
-        }
-
-    except Exception as e:
-        log_error(f"remove_silence_from_audio 处理音频时出错 (input_path={input_path}, output_path={output_path}): {str(e)}")
-        traceback.print_exc()
-        return {
-            "success": False,
-            "original_duration": 0,
-            "processed_duration": 0,
-            "removed_duration": 0,
-            "removed_count": 0,
-            "message": f"处理音频时出错: {str(e)}"
-        }
 
 
 def batch_remove_silence(
@@ -401,7 +406,18 @@ def update_audio_role():
 
 
 
-async def generate_chapter_audio(chapter_role_list,role_audio_id,novel_name,novel_id,server):
+async def generate_chapter_audio(chapter_role_list,role_audio_id,novel_name,novel_id,server,cancel_event=None):
+    """
+    生成章节音频
+    
+    参数:
+        chapter_role_list: 章节角色列表
+        role_audio_id: 角色音频ID列表
+        novel_name: 小说名
+        novel_id: 小说ID
+        server: TTS服务器
+        cancel_event: 取消事件，用于支持任务取消（可选）
+    """
     try:
         wav_file_path_list = []
         temp_path = ROOT_DIR / "temp"
@@ -411,11 +427,27 @@ async def generate_chapter_audio(chapter_role_list,role_audio_id,novel_name,nove
         if not os.path.exists(temp_path):
             os.mkdir(temp_path)
 
+        # 🔍 诊断日志：检查 cancel_event 的状态
+        log(f"🔍 [诊断] generate_chapter_audio 收到 cancel_event: {cancel_event is not None}, is_set: {cancel_event.is_set() if cancel_event else 'N/A'}")
+
+        # 检查是否被取消
+        if cancel_event and cancel_event.is_set():
+            log(f"⚠️ 章节生成任务被取消 (novel_name={novel_name}, novel_id={novel_id}, 阶段：初始化)")
+            return False
+
         # 获取对应小说的旁白的声音
         narration_role = Role.select().where(
             (Role.novel_name == novel_name)&
             (Role.role_name == "旁白")
         ).get_or_none()
+        
+        # 再次检查是否被取消
+        if cancel_event and cancel_event.is_set():
+            log(f"⚠️ 章节生成任务被取消 (novel_name={novel_name}, novel_id={novel_id}, 阶段：获取旁白)")
+            return False
+        
+        log(f"🎬 开始生成章节音频: {novel_name}, {novel_id}, 共 {len(chapter_role_list)} 句")
+        
         narration_role_audio = RoleAudio.select().where(
             RoleAudio.role_name == narration_role.bind_audio_name
         ).get_or_none()
@@ -426,8 +458,8 @@ async def generate_chapter_audio(chapter_role_list,role_audio_id,novel_name,nove
             wav_format="wav",  # 指定格式
             prompt_text=narration_role_audio.audio_text
         )
-        log(f"给 {novel_name} 的 {narration_role.role_name} 分配 {narration_role_audio.role_name}")
-        print(f"给 {novel_name} 的 {narration_role.role_name} 分配 {narration_role_audio.role_name}")
+        # log(f"给 {novel_name} 的 {narration_role.role_name} 分配 {narration_role_audio.role_name}")
+        # print(f"给 {novel_name} 的 {narration_role.role_name} 分配 {narration_role_audio.role_name}")
         model_info = await server.get_model_info()
         sample_rate = int(model_info["sample_rate"])
         chapter_name = "-".join(chapter_role_list[0].get('text').strip().split())
@@ -437,13 +469,27 @@ async def generate_chapter_audio(chapter_role_list,role_audio_id,novel_name,nove
         generate_chapter_audio_duration = 0
         generate_chapter_audio_time = 0
         for (index,chapter_role) in enumerate(chapter_role_list):
+            # 每次循环都检查是否被取消
+            if cancel_event and cancel_event.is_set():
+                log(f"⚠️ 章节生成任务在第 {index+1}/{len(chapter_role_list)} 句前被取消 (novel_name={novel_name}, novel_id={novel_id})")
+                # 清理已生成的临时文件
+                for temp_file in wav_file_path_list:
+                    try:
+                        if os.path.exists(temp_file):
+                            os.remove(temp_file)
+                    except:
+                        pass
+                return False
+            
+            # log(f"🎬 [{novel_name}] 开始生成第 {index+1}/{len(chapter_role_list)} 句")
+            
             # print(chapter_role_list)
             # break
             start_time = time.time()
             wav_duration = 0
             role_prompt_id = ""
             temp_save_wav_file_path = temp_path / f"{chapter_name}-{index}.wav"
-            chapter_text = chapter_role.get("text").replace("…","").replace("·","").replace("(","").replace(")","").replace("[","").replace("]","").replace("{","").replace("}","").replace("<","").replace(">","").replace("-","").replace("_","").replace("@","").replace("#","").replace("*","").replace("\\","").replace("|","").replace("~","").replace("`","").replace(".","").replace("　","")
+            chapter_text = chapter_role.get("text").replace("…","").replace("·","").replace("(","").replace(")","").replace("[","").replace("]","").replace("{","").replace("}","").replace("<","").replace(">","").replace("-","").replace("_","").replace("@","").replace("#","").replace("*","").replace("\\","").replace("|","").replace("~","").replace("`","").replace(".","").replace("　","").replace("　","")
             if chapter_text == "":
                 continue
             buf = []
@@ -502,6 +548,8 @@ async def generate_chapter_audio(chapter_role_list,role_audio_id,novel_name,nove
                 wav_file_path_list.append(temp_save_wav_file_path)
                 wav_duration = wav.shape[0] / sample_rate
                 generate_chapter_audio_duration += wav_duration
+
+            wav_duration = wav_duration if wav_duration > 0 else 0.1
             end_time = time.time() -start_time
             generate_chapter_audio_time += end_time
             print(f"给 {novel_name} 的 {chapter_role.get("role_name")} 分配 {chapter_role.get("bind_role_audio_name")}")
@@ -510,6 +558,36 @@ async def generate_chapter_audio(chapter_role_list,role_audio_id,novel_name,nove
             log(f"小说文本：{chapter_text}")
             print(f"生成音频的时长：{str(wav_duration)}，用时：{str(end_time)}，RTF：{str( end_time / wav_duration)}，当前进度：{str(index+1)}/{str(len(chapter_role_list))}")
             log(f"生成音频的时长：{str(wav_duration)}，用时：{str(end_time)}，RTF：{str( end_time / wav_duration)}，当前进度：{str(index+1)}/{str(len(chapter_role_list))}")
+            
+            # 让出控制权，允许取消事件被处理
+            await asyncio.sleep(0)
+            
+            # 再次检查是否被取消（在生成一句后立即检查）
+            if cancel_event and cancel_event.is_set():
+                log(f"⚠️ ⚠️ 章节生成任务在第 {index+1}/{len(chapter_role_list)} 句生成后被取消 (novel_name={novel_name}, novel_id={novel_id})")
+                # 清理已生成的临时文件
+                for temp_file in wav_file_path_list:
+                    try:
+                        if os.path.exists(temp_file):
+                            os.remove(temp_file)
+                    except:
+                        pass
+                return False
+            
+            log(f"✅ [{novel_name}] 完成生成第 {index+1}/{len(chapter_role_list)} 句")
+        
+        # 检查是否在合并前被取消
+        if cancel_event and cancel_event.is_set():
+            log(f"⚠️ 章节生成任务在合并前被取消 (novel_name={novel_name}, novel_id={novel_id})")
+            # 清理已生成的临时文件
+            for temp_file in wav_file_path_list:
+                try:
+                    if os.path.exists(temp_file):
+                        os.remove(temp_file)
+                except:
+                    pass
+            return False
+        
         # 根据分片列表合并wav文件
         merge_wav_files_without_resampling(wav_file_path_list,save_chapter_file_path,sample_rate)
         print(f"生成章节的时长：{str(generate_chapter_audio_duration)}，总用时：{str(generate_chapter_audio_time)}，RTF：{str(generate_chapter_audio_time / generate_chapter_audio_duration)}")
@@ -644,3 +722,4 @@ if __name__ == '__main__':
     #     if old_role is None:
     #         print(f"扫描到当前角色名 {role_name} 不在数据表中，添加数据：")
     pass
+

@@ -355,7 +355,7 @@ def split_novel_text_by_content_list(novel_content_list,novel_name):
     if len(novel_content_list) == 0:
         return False
 
-    section_re = re.compile(r'^.*[\s]*[第][0-9零一二三四五六七八九十百千万]+[章]\s*.{1,20}$')
+    section_re = re.compile(r'^.*[\s]*[第][0-9零一二三四五六七八九十百千万]+[卷章集回]\s*.{0,20}$')
     input_novel_text_list = novel_content_list
 
     temp_max_section_text_list = []
@@ -380,7 +380,7 @@ def split_novel_text_by_content_list(novel_content_list,novel_name):
                 chapter_text_list.append(chapter_name)
         else:
             line = line.replace(' ', '').replace('\n', '').replace('\r', '').replace('\t', '')
-            if line != "":
+            if line != "" and len(chapter_text_list) > 0:
                 chapter_text_list.append(line)
             if index == len(input_novel_text_list) - 1:
                 chapter_text_array.append(chapter_text_list)
@@ -451,10 +451,12 @@ def split_novel_text_by_content_list(novel_content_list,novel_name):
     except Exception as e:
         traceback.print_exc()
         get_db().rollback()
+
 if __name__ == '__main__':
     # TODO 添加数据时，得判断小说名是否存在
-    novel_path = "沧元图.txt"
+    novel_path = "望长天2.txt"
+    novel_name = novel_path.replace(".txt", "")
     # novel_path = "D:\\Projects\\Python\\lively\\utils\\test.txt"
-    # split_novel_text2(novel_path)
-
-    # parse_novel_text()
+    with open(novel_path, "r", encoding="utf-8") as f:
+        novel_text_list = f.readlines()
+    split_novel_text_by_content_list(novel_text_list, novel_name)

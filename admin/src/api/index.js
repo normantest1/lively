@@ -239,8 +239,5 @@ export default {
   },
   stopTtsModel() {
     return apiClient.post('/tts/stop').then(res => res.data)
-  },
-  shutdownSystem() {
-    return apiClient.post('/system/shutdown').then(res => res.data)
   }
 }

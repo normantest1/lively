@@ -170,6 +170,15 @@ class RoleAudioResponse(RoleAudioBase):
     create_time: datetime.datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+class PaginatedRoleAudioResponse(BaseModel):
+    items: List[RoleAudioResponse]
+    total: int
+
+class PaginatedNovelNameResponse(BaseModel):
+    items: List[NovelNameResponse]
+    total: int
+
 server = ""
 model_lock = asyncio.Lock()
 
@@ -300,71 +309,7 @@ async def restore_watchdog_tasks():
         except Exception as e:
             log_error(f"❌ 恢复看门狗任务失败: {e}")
 
-# ============ TTS 模型控制接口 ============
-@app.get("/api/tts/status")
-async def get_tts_status():
-    """返回TTS模型状态"""
-    return {
-        "loaded": server != "",
-        "model_name": "VoxCPM1.5",
-        "status": "loaded" if server != "" else "stopped"
-    }
 
-@app.post("/api/tts/load")
-async def load_tts_model():
-    """加载TTS模型"""
-    global server
-    async with model_lock:
-        if server != "":
-            return {"success": True, "message": "模型已在运行", "status": "loaded"}
-        try:
-            # 运行阻塞模型加载在独立线程中，避免阻塞事件循环
-            server = await asyncio.to_thread(
-                VoxCPM.from_pretrained,
-                "./VoxCPM1.5/",
-                max_num_batched_tokens=8192,
-                max_num_seqs=16,
-                max_model_len=4096,
-                gpu_memory_utilization=0.95,
-                enforce_eager=False,
-                devices=[0]
-            )
-            set_server_instance(server)
-            return {"success": True, "message": "模型加载完成", "status": "loaded"}
-        except Exception as e:
-            log_error(f"模型加载失败: {e}")
-            return {"success": False, "message": f"模型加载失败: {str(e)}", "status": "stopped"}
-
-@app.post("/api/tts/stop")
-async def stop_tts_model():
-    """停止TTS模型"""
-    global server
-    async with model_lock:
-        if server == "":
-            return {"success": True, "message": "模型已停止", "status": "stopped"}
-        try:
-            await server.stop()
-            server = ""
-            clear_server_instance()
-            return {"success": True, "message": "模型已停止，GPU内存已释放", "status": "stopped"}
-        except Exception as e:
-            log_error(f"模型停止失败: {e}")
-            return {"success": False, "message": f"模型停止失败: {str(e)}", "status": "loaded"}
-
-@app.post("/api/system/shutdown")
-async def shutdown_system():
-    """关闭系统（先停止模型，然后通知用户手动关闭uvicorn）"""
-    global server
-    async with model_lock:
-        try:
-            if server != "":
-                await server.stop()
-                server = ""
-                clear_server_instance()
-            return {"success": True, "message": "模型已停止。请使用 Ctrl+C 或关闭终端停止 uvicorn 进程", "will_exit": False}
-        except Exception as e:
-            log_error(f"系统关闭失败: {e}")
-            return {"success": False, "message": f"系统关闭失败: {str(e)}", "will_exit": False}
 
 # ============ FastAPI 应用 ============
 @asynccontextmanager
@@ -1185,7 +1130,7 @@ def create_novel_name(novel_name_data: NovelNameCreate):
         )
 
 
-@app.get("/api/novel-names", response_model=List[NovelNameResponse])
+@app.get("/api/novel-names", response_model=PaginatedNovelNameResponse)
 def get_novel_names(
         skip: int = Query(0, ge=0),
         limit: int = Query(100, ge=1, le=1000),
@@ -1197,10 +1142,14 @@ def get_novel_names(
     if novel_name:
         query = query.where(NovelName.novel_name.contains(novel_name))
 
+    # 获取总数
+    total = query.count()
+
+    # 获取分页数据
     query = query.order_by(NovelName.create_time.desc())
     query = query.offset(skip).limit(limit)
 
-    return list(query)
+    return {"items": list(query), "total": total}
 
 
 @app.get("/api/novel-names/{novel_name_id}", response_model=NovelNameResponse)
@@ -1313,7 +1262,7 @@ def create_role_audio(role_audio_data: RoleAudioCreate):
         )
 
 
-@app.get("/api/role-audios", response_model=List[RoleAudioResponse])
+@app.get("/api/role-audios", response_model=PaginatedRoleAudioResponse)
 def get_role_audios(
         skip: int = Query(0, ge=0),
         limit: int = Query(100, ge=1, le=1000),
@@ -1333,10 +1282,14 @@ def get_role_audios(
     if min_citation_count is not None:
         query = query.where(RoleAudio.citation_count >= min_citation_count)
 
+    # 获取总数
+    total = query.count()
+
+    # 获取分页数据
     query = query.order_by(RoleAudio.create_time.desc())
     query = query.offset(skip).limit(limit)
 
-    return list(query)
+    return {"items": list(query), "total": total}
 
 
 @app.get("/api/role-audios/{role_audio_id}", response_model=RoleAudioResponse)
@@ -2087,7 +2040,7 @@ def save_settings(settings: SettingsRequest):
 class ScheduledParseJob(BaseModel):
     job_id: str
     cron: str
-    novel_name: str
+    novel_name: Optional[str] = None  # 全部解析模式时可为空
     chapter_count: int
     thread_count: int
 
@@ -2427,6 +2380,66 @@ async def get_max_chapters(novel_name: str, current_state: int):
             detail=f"获取最大章节数失败: {str(e)}"
         )
 #============== 定时任务管理API结束 ===============
+# ============ TTS 模型控制接口 ============
+@app.get("/api/tts/status")
+async def get_tts_status():
+    """返回TTS模型状态"""
+    return {
+        "loaded": server != "",
+        "model_name": "VoxCPM1.5",
+        "status": "loaded" if server != "" else "stopped"
+    }
+@app.post("/api/tts/load")
+async def load_tts_model():
+    """加载TTS模型"""
+    global server
+    async with model_lock:
+        if server != "":
+            return {"success": True, "message": "模型已在运行", "status": "loaded"}
+        try:
+            # 运行阻塞模型加载在独立线程中，避免阻塞事件循环
+            # server = await asyncio.to_thread(
+            #     VoxCPM.from_pretrained,
+            #     "./VoxCPM1.5/",
+            #     max_num_batched_tokens=8192,
+            #     max_num_seqs=16,
+            #     max_model_len=4096,
+            #     gpu_memory_utilization=0.95,
+            #     enforce_eager=False,
+            #     devices=[0]
+            # )
+            server = AsyncVoxCPMServerPool = VoxCPM.from_pretrained(
+                "./VoxCPM1.5/",
+                max_num_batched_tokens=8192,
+                max_num_seqs=16,
+                max_model_len=4096,
+                gpu_memory_utilization=0.95,
+                enforce_eager=False,
+                devices=[0]
+            )
+            set_server_instance(server)
+            return {"success": True, "message": "模型加载完成", "status": "loaded"}
+        except Exception as e:
+            log_error(f"模型加载失败: {e}")
+            traceback.print_exc()
+            return {"success": False, "message": f"模型加载失败: {str(e)}", "status": "stopped"}
+
+@app.post("/api/tts/stop")
+async def stop_tts_model():
+    """停止TTS模型"""
+    global server
+    async with model_lock:
+        if server == "":
+            return {"success": True, "message": "模型已停止", "status": "stopped"}
+        try:
+            await server.stop()
+            server = ""
+            clear_server_instance()
+            return {"success": True, "message": "模型已停止，GPU内存已释放", "status": "stopped"}
+        except Exception as e:
+            log_error(f"模型停止失败: {e}")
+            traceback.print_exc()
+            return {"success": False, "message": f"模型停止失败: {str(e)}", "status": "loaded"}
 
 #============== 前端静态页面 =============== #移动这里
 # 配置 CORS
@@ -2462,8 +2475,9 @@ async def serve_spa(path: str): #移动这里
 
     # 对于其他路径，返回 index.html 让 Vue Router 处理 #移动这里
     return FileResponse("admin/dist/index.html") #移动这里
-#============== 前端静态页面结束 =============== #移动这里
 
+
+#============== 前端静态页面结束 =============== #移动这里
 if __name__ == '__main__':
     import uvicorn
 

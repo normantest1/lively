@@ -326,32 +326,15 @@ async def execute_parse_task(job_id: str, novel_name: str, chapter_count: int, t
 
         log_info(f"正在查询待解析的小说章节 (current_state=1)...")
         db = get_db()
-        if novel_name:
-            novels_to_parse = Novel.select().where(
-                Novel.novel_name == novel_name,
-                Novel.current_state == 1
-            ).limit(chapter_count)
-        else:
-            novels_to_parse = Novel.select().where(
-                Novel.current_state == 1
-            ).order_by(Novel.create_time.asc()).limit(chapter_count)
 
-        novel_list = list(novels_to_parse)
-        total_count = len(novel_list)
-        log_info(f"找到 {total_count} 个待解析的章节")
-
+        # 按导入顺序全部解析模式（novel_name为空）
+        # 直接调用async_parse_text，它会按create_time升序查询chapter_count条数据
+        log_info(f"开始按导入顺序批量解析，章节数: {chapter_count}，线程数: {thread_count}")
         if log_callback:
-            await log_callback(f"[定时任务] 找到 {total_count} 个待解析的章节\n")
-
-        if total_count == 0:
-            log_warning(f"没有找到待解析的章节，任务结束")
-            if log_callback:
-                await log_callback(f"[定时任务] 没有找到待解析的章节\n")
-            return True
-
-        log_info(f"开始解析任务，共 {total_count} 个章节")
-        if log_callback:
-            await log_callback(f"[定时任务] 开始解析任务，共 {total_count} 个章节\n")
+            if novel_name:
+                await log_callback(f"[定时任务] 开始解析小说: {novel_name}，章节数: {chapter_count}\n")
+            else:
+                await log_callback(f"[定时任务] 开始按导入顺序批量解析，章节数: {chapter_count}，线程数: {thread_count}\n")
 
         await async_parse_text(
             novel_name=novel_name,
@@ -367,7 +350,7 @@ async def execute_parse_task(job_id: str, novel_name: str, chapter_count: int, t
                 await log_callback(f"[定时任务] 任务被取消\n")
             return False
 
-        log_success(f"批量解析任务执行完成！共处理 {total_count} 个章节")
+        log_success(f"批量解析任务执行完成！")
         if log_callback:
             await log_callback(f"[定时任务] 批量解析任务执行完成\n")
 

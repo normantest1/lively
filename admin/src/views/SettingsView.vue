@@ -179,13 +179,6 @@
         >
           停止模型
         </el-button>
-        <el-button
-          type="warning"
-          :disabled="ttsStatus === 'loading'"
-          @click="handleShutdown"
-        >
-          关闭系统
-        </el-button>
       </div>
     </el-card>
   </div>
@@ -340,19 +333,6 @@ const handleStopModel = async () => {
     ElMessage.error('停止模型失败')
   } finally {
     ttsLoading.value = false
-  }
-}
-
-const handleShutdown = async () => {
-  try {
-    const result = await api.shutdownSystem()
-    if (result.success) {
-      ElMessage.warning(result.message)
-    } else {
-      ElMessage.error(result.message)
-    }
-  } catch (error) {
-    ElMessage.error('关闭系统失败')
   }
 }
 
