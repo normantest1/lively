@@ -280,8 +280,8 @@ const loadData = async () => {
     }
 
     const data = await api.getRoleAudios(params)
-    tableData.value = data
-    pagination.total = data.length
+    tableData.value = data.items || data
+    pagination.total = data.total || (Array.isArray(data) ? data.length : 0)
   } catch (error) {
     console.error('加载数据失败:', error)
   } finally {

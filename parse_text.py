@@ -184,7 +184,7 @@ class DynamicConcurrentProcessor:
             try:
                 with self.client.messages.stream(
                         model=self.model_name,
-                        max_tokens=20480,
+                        max_tokens=204800,
                         messages=[
                             {
                                 "role": "user",
@@ -564,7 +564,7 @@ async def async_parse_text(novel_name=None, chapter_count=None, thread_count=Non
     修改后的main函数，支持自定义日志输出和取消事件
 
     Args:
-        novel_name: 小说名称，如果为None则使用默认值"沧元图"
+        novel_name: 小说名称，如果为None则按create_time升序查询所有current_state=1的章节
         chapter_count: 章节数量限制，如果为None则使用默认值30
         thread_count: 线程数，如果为None则使用默认值10
         log_callback: 日志回调函数，接收字符串参数，用于将日志发送到前端
@@ -595,35 +595,32 @@ async def async_parse_text(novel_name=None, chapter_count=None, thread_count=Non
     }
 
     # 使用传入的参数或默认值
-    novel_name = novel_name if novel_name else "沧元图"
-    chapter_count = chapter_count if chapter_count else 30
+    actual_chapter_count = chapter_count if chapter_count else 30
 
     log(f"\n{'=' * 60}")
-    log(f"开始处理小说: {novel_name}")
-    log(f"最大章节数: {chapter_count}")
+    if novel_name:
+        log(f"开始处理小说: {novel_name}")
+    else:
+        log(f"开始按导入顺序批量解析")
+    log(f"最大章节数: {actual_chapter_count}")
     log(f"并发数: {actual_thread_count}")
-    log(f"模型: {config.config_data['model_name']}")
-    log(f"{'=' * 60}\n")
-
-    # 使用传入的参数或默认值
-    novel_name = novel_name if novel_name else "沧元图"
-    chapter_count = chapter_count if chapter_count else 30
-
-    log(f"\n{'=' * 60}")
-    log(f"开始处理小说: {novel_name}")
-    log(f"最大章节数: {chapter_count}")
-    log(f"并发数: {config.config_data['max_concurrent_requests']}")
     log(f"模型: {config.config_data['model_name']}")
     log(f"{'=' * 60}\n")
 
     # 准备数据：创建 (text, db_id) 的列表
     texts_with_ids = []
-    # TODO 这里需要修改成按照传进来的小说名字和分析数量进行运行
     # 查询需要处理的章节
-    novel_list = Novel.select().where(
-        (Novel.novel_name == novel_name) &
-        (Novel.current_state == 1)
-    ).limit(chapter_count)
+    if novel_name:
+        # 按小说名查询
+        novel_list = Novel.select().where(
+            (Novel.novel_name == novel_name) &
+            (Novel.current_state == 1)
+        ).limit(actual_chapter_count)
+    else:
+        # 按导入顺序查询所有current_state=1的章节
+        novel_list = Novel.select().where(
+            Novel.current_state == 1
+        ).order_by(Novel.create_time.asc()).limit(actual_chapter_count)
 
     log(f"找到 {len(novel_list)} 个待处理的章节")
 

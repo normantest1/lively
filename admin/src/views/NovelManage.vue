@@ -3,7 +3,7 @@
     <el-card>
       <template #header>
         <div class="card-header">
-          <span>小说管理</span>
+          <span>章节管理</span>
           <div>
             <el-button type="primary" @click="handleCreate">添加小说</el-button>
             <el-button type="info" @click="handleBatchUpdateState" :disabled="selectedRows.length === 0">
@@ -30,6 +30,7 @@
             <el-button type="info" @click="handleShowLog">解析状态</el-button>
             <el-button type="warning" @click="handleBatchAnalyze">批量解析</el-button>
             <el-button type="success" @click="handleBatchGenerate">批量生成</el-button>
+            <el-button type="primary" @click="handleShowChapterStats">小说章节对应</el-button>
           </div>
         </div>
       </template>
@@ -203,6 +204,14 @@
             />
           </el-select>
         </el-form-item>
+        <el-form-item label="线程数" required>
+          <el-input-number
+            v-model="generateForm.thread_count"
+            :min="1"
+            :max="32"
+            style="width: 100%"
+          />
+        </el-form-item>
         <el-form-item label="章节数" required>
           <el-input-number
             v-model="generateForm.chapter_count"
@@ -223,6 +232,19 @@
         <el-button @click="generateDialogVisible = false">取消</el-button>
         <el-button type="primary" @click="handleGenerateSubmit">开始生成</el-button>
       </template>
+    </el-dialog>
+
+    <!-- 小说章节对应对话框 -->
+    <el-dialog
+      v-model="chapterStatsDialogVisible"
+      title="小说章节对应"
+      width="800px"
+    >
+      <el-table :data="chapterStatsData" border style="width: 100%">
+        <el-table-column prop="novel_name" label="小说名" width="200" />
+        <el-table-column prop="stored_chapter_count" label="数据库储存的章节数" width="200" />
+        <el-table-column prop="last_chapter_name" label="最后一章的章节" />
+      </el-table>
     </el-dialog>
 
     <!-- 批量解析对话框 -->
@@ -445,8 +467,12 @@ const generateDialogVisible = ref(false)
 const generateForm = reactive({
   novel_name: '',
   chapter_count: 1,
+  thread_count: 2,
   max_chapter_count: null
 })
+
+const chapterStatsDialogVisible = ref(false)
+const chapterStatsData = ref([])
 
 const batchForm = reactive({
   novel_name: '',
@@ -718,8 +744,28 @@ const handleUploadBatch = async () => {
     loading.value = true
     const files = fileList.value.map(item => item.raw)
 
-    await api.uploadNovelsBatch(files)
-    ElMessage.success(`成功上传 ${files.length} 个文件`)
+    const response = await api.uploadNovelsBatch(files)
+
+    // 构建提示信息
+    let message = ''
+    if (response.success_count > 0) {
+      message += `成功上传 ${response.success_count} 个文件`
+    }
+
+    if (response.existed_count > 0) {
+      if (message) {
+        message += '\n'
+      }
+      message += `⚠️ 跳过 ${response.existed_count} 个已存在的小说:\n${response.existed_novels.join('\n')}`
+      ElMessage.warning(message)
+    } else if (response.success_count > 0) {
+      ElMessage.success(message)
+    }
+
+    if (response.error_count > 0) {
+      ElMessage.error(`${response.error_count} 个文件处理失败`)
+    }
+
     fileList.value = []
     loadData()
   } catch (error) {
@@ -892,6 +938,21 @@ const handleSetMaxChapter = () => {
   }
 }
 
+const handleShowChapterStats = async () => {
+  try {
+    const response = await api.getNovelChapterStats()
+    if (response.status === 'success') {
+      chapterStatsData.value = response.data
+      chapterStatsDialogVisible.value = true
+    } else {
+      ElMessage.error('获取小说章节统计数据失败')
+    }
+  } catch (error) {
+    console.error('获取小说章节统计数据失败:', error)
+    ElMessage.error('获取小说章节统计数据失败')
+  }
+}
+
 const handleGenerateSubmit = async () => {
   if (!generateForm.novel_name) {
     ElMessage.warning('请选择小说')
@@ -900,6 +961,11 @@ const handleGenerateSubmit = async () => {
 
   if (!generateForm.chapter_count || generateForm.chapter_count < 1) {
     ElMessage.warning('请输入有效的章节数')
+    return
+  }
+
+  if (!generateForm.thread_count || generateForm.thread_count < 1) {
+    ElMessage.warning('请输入有效的线程数')
     return
   }
 
@@ -912,7 +978,8 @@ const handleGenerateSubmit = async () => {
 
     await api.batchGenerateNovel(
       generateForm.novel_name,
-      generateForm.chapter_count
+      generateForm.chapter_count,
+      generateForm.thread_count
     )
 
     ElMessage.success('批量生成任务已提交')
