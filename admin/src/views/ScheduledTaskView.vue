@@ -89,7 +89,7 @@
               </el-form-item>
               
               <el-form-item>
-                <el-button type="primary" @click="handleSetParseTask">设置</el-button>
+                <el-button type="primary" @click="handleSetParseTask">添加</el-button>
                 <el-button type="danger" @click="handleDeleteParseTask">删除任务</el-button>
                 <el-tag 
                   :type="parseTaskStatus.running ? 'warning' : 'success'"
@@ -295,6 +295,10 @@ const watchdogForm = reactive({
 })
 
 const watchdogTaskStatus = reactive({
+  running: false
+})
+
+const parseTaskStatus = reactive({
   running: false
 })
 
