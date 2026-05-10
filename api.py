@@ -2,6 +2,7 @@
 import traceback
 from contextlib import asynccontextmanager
 from pathlib import Path
+from zipvoice.luxvoice import LuxTTS
 
 from starlette.middleware.cors import CORSMiddleware
 from bean.beans import RoleAudio, Role, Novel, get_db, NovelName
@@ -11,10 +12,6 @@ from pydantic import BaseModel, ConfigDict
 from pydantic import Field as PydanticField
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
-# TODO 这里是关键注释
-from nanovllm_voxcpm.models.voxcpm.server import AsyncVoxCPMServerPool
-from nanovllm_voxcpm import VoxCPM
-
 from typing import List, Optional
 from peewee import *
 import datetime
@@ -334,15 +331,16 @@ async def lifespan(app: FastAPI):
     if server == "":
         print("加载模型......")
         log("加载模型......")
-        server = AsyncVoxCPMServerPool = VoxCPM.from_pretrained(
-            "./VoxCPM1.5/",
-            max_num_batched_tokens=8192,
-            max_num_seqs=16,
-            max_model_len=4096,
-            gpu_memory_utilization=0.95,
-            enforce_eager=False,
-            devices=[0]
-        )
+        server = LuxTTS('./LuxTTS/', device='cuda')
+        # server = AsyncVoxCPMServerPool = VoxCPM.from_pretrained(
+        #     "./VoxCPM1.5/",
+        #     max_num_batched_tokens=8192,
+        #     max_num_seqs=16,
+        #     max_model_len=4096,
+        #     gpu_memory_utilization=0.95,
+        #     enforce_eager=False,
+        #     devices=[0]
+        # )
 
     set_server_instance(server)
     start_scheduler()
@@ -364,7 +362,7 @@ async def lifespan(app: FastAPI):
         log("Database closed")
     print("关闭模型......")
     log("关闭模型......")
-    await server.stop()
+    # await server.stop()
 
     log("="*80)
     log("服务器关闭")
@@ -1954,6 +1952,8 @@ class SettingsRequest(BaseModel):
     watchdog_reload_wait_seconds: Optional[int] = None
     watchdog_resume_wait_seconds: Optional[int] = None
     watchdog_log_check_lines: Optional[int] = None
+    inference_steps: Optional[int] = None
+    speech_speed: Optional[float] = None
 
 
 def get_default_settings() -> dict:
@@ -1971,7 +1971,9 @@ def get_default_settings() -> dict:
         "watchdog_auto_recovery": True,
         "watchdog_reload_wait_seconds": 60,
         "watchdog_resume_wait_seconds": 120,
-        "watchdog_log_check_lines": 10
+        "watchdog_log_check_lines": 10,
+        "inference_steps": 6,
+        "speech_speed": 0.9
     }
 
 
@@ -2408,15 +2410,17 @@ async def load_tts_model():
             #     enforce_eager=False,
             #     devices=[0]
             # )
-            server = AsyncVoxCPMServerPool = VoxCPM.from_pretrained(
-                "./VoxCPM1.5/",
-                max_num_batched_tokens=8192,
-                max_num_seqs=16,
-                max_model_len=4096,
-                gpu_memory_utilization=0.95,
-                enforce_eager=False,
-                devices=[0]
-            )
+            server = LuxTTS('./LuxTTS/', device='cuda')
+
+            # server = AsyncVoxCPMServerPool = VoxCPM.from_pretrained(
+            #     "./VoxCPM1.5/",
+            #     max_num_batched_tokens=8192,
+            #     max_num_seqs=16,
+            #     max_model_len=4096,
+            #     gpu_memory_utilization=0.95,
+            #     enforce_eager=False,
+            #     devices=[0]
+            # )
             set_server_instance(server)
             return {"success": True, "message": "模型加载完成", "status": "loaded"}
         except Exception as e:
@@ -2432,7 +2436,7 @@ async def stop_tts_model():
         if server == "":
             return {"success": True, "message": "模型已停止", "status": "stopped"}
         try:
-            await server.stop()
+            # await server.stop()
             server = ""
             clear_server_instance()
             return {"success": True, "message": "模型已停止，GPU内存已释放", "status": "stopped"}

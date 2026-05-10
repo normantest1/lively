@@ -143,6 +143,35 @@
           </div>
         </el-form-item>
 
+        <el-divider content-position="left">音频生成设置</el-divider>
+
+        <el-form-item label="推理步数" prop="inference_steps">
+          <el-input-number
+            v-model="formData.inference_steps"
+            :min="4"
+            :max="100"
+            :step="1"
+            style="width: 100%"
+          />
+          <div style="color: #909399; font-size: 12px; margin-top: 5px;">
+            音频生成的推理步数，值越大质量越高但速度越慢（范围：4-100）
+          </div>
+        </el-form-item>
+
+        <el-form-item label="语音速度" prop="speech_speed">
+          <el-input-number
+            v-model="formData.speech_speed"
+            :min="0.5"
+            :max="2"
+            :step="0.1"
+            :precision="1"
+            style="width: 100%"
+          />
+          <div style="color: #909399; font-size: 12px; margin-top: 5px;">
+            语音生成的速度，值越大语速越快（范围：0.5-2）
+          </div>
+        </el-form-item>
+
         <el-form-item>
           <el-button type="primary" @click="handleSave" :loading="saving">保存设置</el-button>
           <el-button @click="handleReset">重置</el-button>
@@ -210,7 +239,9 @@ const formData = reactive({
   watchdog_auto_recovery: true,
   watchdog_reload_wait_seconds: 60,
   watchdog_resume_wait_seconds: 120,
-  watchdog_log_check_lines: 10
+  watchdog_log_check_lines: 10,
+  inference_steps: 6,
+  speech_speed: 0.9
 })
 
 const formRules = {
@@ -257,7 +288,9 @@ const loadSettings = async () => {
       watchdog_auto_recovery: data.watchdog_auto_recovery ?? true,
       watchdog_reload_wait_seconds: data.watchdog_reload_wait_seconds ?? 60,
       watchdog_resume_wait_seconds: data.watchdog_resume_wait_seconds ?? 120,
-      watchdog_log_check_lines: data.watchdog_log_check_lines ?? 10
+      watchdog_log_check_lines: data.watchdog_log_check_lines ?? 10,
+      inference_steps: data.inference_steps ?? 6,
+      speech_speed: data.speech_speed ?? 0.9
     })
   } catch (error) {
     console.error('加载设置失败:', error)

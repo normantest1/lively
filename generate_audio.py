@@ -1,8 +1,10 @@
+import re
 import threading
 import os
 from pathlib import Path
 from struct import pack_into
 
+import torch
 from pydub import AudioSegment
 from pydub.silence import detect_nonsilent
 from tqdm.asyncio import tqdm
@@ -297,31 +299,63 @@ def merge_wav_files_without_resampling(file_list, output_file, target_sr):
             log(f"  - {os.path.basename(f)} (采样率: {sr}Hz)")
     for file in file_list:
         os.remove(file)
-    result = remove_silence_from_audio(
-        input_path=output_file,
-        output_path=output_file,
-        silence_thresh=-40,  # -40 dBFS
-        min_silence_len=3000,  # 3秒以上的静音才处理
-        keep_short_silence=500  # 短停顿保留500ms
-    )
-    print("\n静音处理结果:")
-    log("\n静音处理结果:")
-    print(f"  原始时长: {result['original_duration']:.2f} 秒")
-    log(f"  原始时长: {result['original_duration']:.2f} 秒")
-    print(f"  处理后时长: {result['processed_duration']:.2f} 秒")
-    log(f"  处理后时长: {result['processed_duration']:.2f} 秒")
-    print(f"  删除静音: {result['removed_duration']:.2f} 秒")
-    log(f"  删除静音: {result['removed_duration']:.2f} 秒")
-    print(f"  删除段数: {result['removed_count']}")
-    log(f"  删除段数: {result['removed_count']}")
-    print(f"  状态: {'成功' if result['success'] else '失败'}")
-    log(f"  状态: {'成功' if result['success'] else '失败'}")
-    print(f"  信息: {result['message']}")
-    log(f"  信息: {result['message']}")
+    # result = remove_silence_from_audio(
+    #     input_path=output_file,
+    #     output_path=output_file,
+    #     silence_thresh=-40,  # -40 dBFS
+    #     min_silence_len=3000,  # 3秒以上的静音才处理
+    #     keep_short_silence=500  # 短停顿保留500ms
+    # )
+    # print("\n静音处理结果:")
+    # log("\n静音处理结果:")
+    # print(f"  原始时长: {result['original_duration']:.2f} 秒")
+    # log(f"  原始时长: {result['original_duration']:.2f} 秒")
+    # print(f"  处理后时长: {result['processed_duration']:.2f} 秒")
+    # log(f"  处理后时长: {result['processed_duration']:.2f} 秒")
+    # print(f"  删除静音: {result['removed_duration']:.2f} 秒")
+    # log(f"  删除静音: {result['removed_duration']:.2f} 秒")
+    # print(f"  删除段数: {result['removed_count']}")
+    # log(f"  删除段数: {result['removed_count']}")
+    # print(f"  状态: {'成功' if result['success'] else '失败'}")
+    # log(f"  状态: {'成功' if result['success'] else '失败'}")
+    # print(f"  信息: {result['message']}")
+    # log(f"  信息: {result['message']}")
     return merged_audio, target_sr
-
-async def load_role_audio(novel_name,server):
+async def load_role_audio(novel_name,lux_tts):
     """
+    新版
+    加载所有音频角色到内存中，提高音频生成速度
+    :param novel_name: 这个已经不需要了，但为了不修改其它代码，所以不删需要加载角色的小说名字
+    :param server: nanollm_voxcpe的模型对象
+    :return:
+    """
+    try:
+        # 加载配置信息
+        load_role_count = load_config(config_path,"preload_role_count")
+        audio_role_list = RoleAudio.select().limit(load_role_count)
+        load_role_list = []
+        ref_duration = 1000
+        rms = 0.01
+        for audio_role in audio_role_list:
+            prompt_id = lux_tts.encode_prompt(
+                audio_role.audio_path,
+                duration=ref_duration,
+                rms=rms,
+                prompt_text=audio_role.audio_text
+            )
+            tmep_role = {
+                "audio_role_name": audio_role.role_name,
+                "prompt_id": prompt_id
+            }
+            load_role_list.append(tmep_role)
+        return load_role_list
+    except Exception as e:
+        log_error(f"load_role_audio 加载角色音频失败 (novel_name={novel_name}): {str(e)}")
+        traceback.print_exc()
+        return []
+async def load_role_audio_old(novel_name,lux_tts):
+    """
+    旧版
     加载前x个主要角色到内存中，提高音频生成速度
     :param novel_name: 需要加载角色的小说名字
     :param server: nanollm_voxcpe的模型对象
@@ -346,14 +380,23 @@ async def load_role_audio(novel_name,server):
                 audio_role_name_list.append(role.bind_audio_name)
         audio_role_list = RoleAudio.select().where(RoleAudio.role_name.in_(audio_role_name_list))
         load_role_list = []
+        ref_duration = 1000
+        rms = 0.01
         for audio_role in audio_role_list:
-            with open(audio_role.audio_path, "rb") as f:
-                wav_bytes = f.read()
-            prompt_id = await server.add_prompt(
-                wav=wav_bytes,
-                wav_format="wav",  # 指定格式
+            # with open(audio_role.audio_path, "rb") as f:
+            #     wav_bytes = f.read()
+
+            prompt_id = lux_tts.encode_prompt(
+                audio_role.audio_path,
+                duration=ref_duration,
+                rms=rms,
                 prompt_text=audio_role.audio_text
             )
+            # prompt_id = await server.add_prompt(
+            #     wav=wav_bytes,
+            #     wav_format="wav",  # 指定格式
+            #     prompt_text=audio_role.audio_text
+            # )
             tmep_role = {
                 "audio_role_name": audio_role.role_name,
                 "prompt_id": prompt_id
@@ -403,10 +446,74 @@ def update_audio_role():
     except Exception as e:
         log_error(f"update_audio_role 更新角色音频信息失败: {str(e)}")
         traceback.print_exc()
+def extract_chinese(text):
+    # 只保留中文字符
+    res = re.findall(r'[\u4e00-\u9fff]', text)
+    return ''.join(res)
 
 
+def extract_dialogue_and_narration(text: str) -> list:
+    """
+    提取文本中的角色台词（「」、"" 内）和旁白（符号外），按原文顺序返回
+    :param text: 输入的原始文本
+    :return: 按顺序排列的台词+旁白列表
+    """
+    # 定义对话符号对：开始符号 → 结束符号
+    quote_pairs = {
+        '「': '」',
+        '"': '"'
+    }
+    result = []
+    start = 0
+    n = len(text)
 
-async def generate_chapter_audio(chapter_role_list,role_audio_id,novel_name,novel_id,server,cancel_event=None):
+    while start < n:
+        # 查找下一个对话开始符号的位置
+        next_quote_pos = -1
+        quote_char = None
+
+        # 遍历所有对话开头符号，找到最近的一个
+        for q_start in quote_pairs:
+            pos = text.find(q_start, start)
+            if pos != -1 and (next_quote_pos == -1 or pos < next_quote_pos):
+                next_quote_pos = pos
+                quote_char = q_start
+
+        # 没有找到任何对话符号，剩余全部是旁白
+        if next_quote_pos == -1:
+            narration = text[start:].strip()
+            if narration:
+                result.append(narration)
+            break
+
+        # 提取对话符号之前的旁白
+        narration = text[start:next_quote_pos].strip()
+        if narration:
+            result.append(narration)
+
+        # 找到对应的结束符号
+        end_quote = quote_pairs[quote_char]
+        end_pos = text.find(end_quote, next_quote_pos + 1)
+
+        # 没有匹配的结束符号，把剩下的全部当作台词
+        if end_pos == -1:
+            dialogue = text[next_quote_pos:].strip()
+            if dialogue:
+                result.append(dialogue)
+            start = n
+            continue
+
+        # 提取完整对话
+        dialogue = text[next_quote_pos:end_pos + 1].strip()
+        if dialogue:
+            result.append(dialogue)
+
+        # 移动指针继续处理
+        start = end_pos + 1
+
+    return result
+
+async def generate_chapter_audio(chapter_role_list,role_audio_id,novel_name,novel_id,lux_tts,cancel_event=None):
     """
     生成章节音频
     
@@ -451,23 +558,38 @@ async def generate_chapter_audio(chapter_role_list,role_audio_id,novel_name,nove
         narration_role_audio = RoleAudio.select().where(
             RoleAudio.role_name == narration_role.bind_audio_name
         ).get_or_none()
-        with open(narration_role_audio.audio_path, "rb") as f:
-            narration_wav_bytes = f.read()
-        narration_prompt_id = await server.add_prompt(
-            wav=narration_wav_bytes,
-            wav_format="wav",  # 指定格式
-            prompt_text=narration_role_audio.audio_text
+        # 获取旁白音频文件
+        ref_duration = 1000
+        rms = 0.01
+        narration_prompt_id = lux_tts.encode_prompt(
+            narration_role_audio.audio_path,
+            duration=ref_duration,
+            rms=rms,
+            prompt_text=extract_chinese(narration_role_audio.audio_text)
         )
+        # with open(narration_role_audio.audio_path, "rb") as f:
+        #     narration_wav_bytes = f.read()
+        # narration_prompt_id = await server.add_prompt(
+        #     wav=narration_wav_bytes,
+        #     wav_format="wav",  # 指定格式
+        #     prompt_text=narration_role_audio.audio_text
+        # )
         # log(f"给 {novel_name} 的 {narration_role.role_name} 分配 {narration_role_audio.role_name}")
         # print(f"给 {novel_name} 的 {narration_role.role_name} 分配 {narration_role_audio.role_name}")
-        model_info = await server.get_model_info()
-        sample_rate = int(model_info["sample_rate"])
+        # model_info = await server.get_model_info()
+        # sample_rate = int(model_info["sample_rate"])
         chapter_name = "-".join(chapter_role_list[0].get('text').strip().split())
 
         save_chapter_file_path = save_chapter_audio_path / f"{novel_id}-{chapter_name}.wav"
 
         generate_chapter_audio_duration = 0
         generate_chapter_audio_time = 0
+        t_shift = 0.9
+        # 从配置文件加载生成步数和语音速度
+        num_steps = load_config(config_path, "inference_steps") or 6
+        speed = load_config(config_path, "speech_speed") or 0.9
+        sample_rate = 48000
+        return_smooth = False
         for (index,chapter_role) in enumerate(chapter_role_list):
             # 每次循环都检查是否被取消
             if cancel_event and cancel_event.is_set():
@@ -489,24 +611,34 @@ async def generate_chapter_audio(chapter_role_list,role_audio_id,novel_name,nove
             wav_duration = 0
             role_prompt_id = ""
             temp_save_wav_file_path = temp_path / f"{chapter_name}-{index}.wav"
-            chapter_text = chapter_role.get("text").replace("…","").replace("·","").replace("(","").replace(")","").replace("[","").replace("]","").replace("{","").replace("}","").replace("<","").replace(">","").replace("-","").replace("_","").replace("@","").replace("#","").replace("*","").replace("\\","").replace("|","").replace("~","").replace("`","").replace(".","").replace("　","").replace("　","")
+            chapter_text = chapter_role.get("text").replace("…","").replace("·","").replace("(","").replace(")","").replace("[","").replace("]","").replace("{","").replace("}","").replace("<","").replace(">","").replace("-","").replace("_","").replace("@","").replace("#","").replace("*","").replace("\\","").replace("|","").replace("~","").replace("`","").replace(".","").replace("　","").replace("　","").replace("—","")
             if chapter_text == "":
                 continue
             buf = []
+            print(f"小说文本：{chapter_text}")
+            log(f"小说文本：{chapter_text}")
             #生成旁白声音
             if chapter_role.get("type") == "narration":
-                async for data in tqdm(
-                        server.generate(
-                            target_text=chapter_text,
-                            cfg_value=2,
-                            prompt_id=narration_prompt_id,
-                        )
-                ):
-                    buf.append(data)
-                wav = np.concatenate(buf, axis=0)
+                chapter_text = chapter_text.replace("「", "").replace("」", "").replace("”", "").replace("”", "").replace("？", "").replace("?","").replace("!", "").replace("！", "")
+                if chapter_text == "":
+                    continue
+                wav = lux_tts.generate_speech(chapter_text, narration_prompt_id, num_steps=num_steps, t_shift=t_shift,
+                                                    speed=speed, return_smooth=return_smooth)
+                wav = wav.numpy().squeeze()
+                if torch.cuda.is_available():
+                    torch.cuda.empty_cache()
+                # async for data in tqdm(
+                #         server.generate(
+                #             target_text=chapter_text,
+                #             cfg_value=2,
+                #             prompt_id=narration_prompt_id,
+                #         )
+                # ):
+                #     buf.append(data)
+                # wav = np.concatenate(buf, axis=0)
                 sf.write(temp_save_wav_file_path, wav, sample_rate)
                 wav_file_path_list.append(temp_save_wav_file_path)
-                wav_duration = wav.shape[0] / sample_rate
+                wav_duration = len(wav) / sample_rate
                 generate_chapter_audio_duration += wav_duration
             #生成角色声音
             elif chapter_role.get("type") == "role":
@@ -528,34 +660,60 @@ async def generate_chapter_audio(chapter_role_list,role_audio_id,novel_name,nove
                     """
                 if role_prompt_id == "":
                     role_audio_data = RoleAudio.get(role_name=chapter_role.get("bind_role_audio_name"))
-                    with open(role_audio_data.audio_path, "rb") as f:
-                        role_wav_bytes = f.read()
-                    role_prompt_id = await server.add_prompt(
-                        wav=role_wav_bytes,
-                        wav_format="wav",  # 指定格式
-                        prompt_text=role_audio_data.audio_text
-                    )
-                async for data in tqdm(
-                        server.generate(
-                            target_text=chapter_text,
-                            cfg_value=2,
-                            prompt_id=role_prompt_id,
-                        )
-                ):
-                    buf.append(data)
-                wav = np.concatenate(buf, axis=0)
-                sf.write(temp_save_wav_file_path, wav, sample_rate)
-                wav_file_path_list.append(temp_save_wav_file_path)
-                wav_duration = wav.shape[0] / sample_rate
-                generate_chapter_audio_duration += wav_duration
+                    role_prompt_id = lux_tts.encode_prompt(role_audio_data.audio_path, duration=ref_duration, rms=rms,
+                                                           prompt_text=extract_chinese(role_audio_data.audio_text))
+
+                    # with open(role_audio_data.audio_path, "rb") as f:
+                    #     role_wav_bytes = f.read()
+                    # role_prompt_id = await server.add_prompt(
+                    #     wav=role_wav_bytes,
+                    #     wav_format="wav",  # 指定格式
+                    #     prompt_text=role_audio_data.audio_text
+                    # )
+                result_list = extract_dialogue_and_narration(chapter_text)
+                for result_index,result_text in enumerate(result_list):
+                    print(f"分割的文本：{result_text}")
+                    #该文本为角色朗读的语句
+                    if result_text.__contains__("“") or result_text.__contains__('"') or result_text.__contains__('「') :
+                        print("是角色的语句")
+                        result_text = result_text.replace("「", "").replace("」", "").replace("”", "").replace("”","").replace(
+                            "？", "").replace("?", "").replace("!", "").replace("！", "")
+                        if result_text == "":
+                            continue
+                        wav = lux_tts.generate_speech(result_text, role_prompt_id, num_steps=num_steps, t_shift=t_shift,
+                                                        speed=speed, return_smooth=return_smooth)
+                    else:
+                        print("是旁白的语句")
+                        wav = lux_tts.generate_speech(result_text, narration_prompt_id, num_steps=num_steps, t_shift=t_shift,
+                                                      speed=speed, return_smooth=return_smooth)
+                    if torch.cuda.is_available():
+                        torch.cuda.empty_cache()
+                    # temp_save_wav_file_path = temp_path / f"{chapter_name}-{index}.wav"
+                    temp_save_wav_file_path = str(temp_save_wav_file_path).replace(".wav","")+f"-{result_index}.wav"
+                    wav = wav.numpy().squeeze()
+                    sf.write(temp_save_wav_file_path, wav, sample_rate)
+                    wav_file_path_list.append(temp_save_wav_file_path)
+                    wav_duration = len(wav) / sample_rate
+                    generate_chapter_audio_duration += wav_duration
+                # async for data in tqdm(
+                #         server.generate(
+                #             target_text=chapter_text,
+                #             cfg_value=2,
+                #             prompt_id=role_prompt_id,
+                #         )
+                # ):
+                #     buf.append(data)
+                # wav = np.concatenate(buf, axis=0)
+                # sf.write(temp_save_wav_file_path, wav, sample_rate)
+                # wav_file_path_list.append(temp_save_wav_file_path)
+                # wav_duration = wav.shape[0] / sample_rate
+                # generate_chapter_audio_duration += wav_duration
 
             wav_duration = wav_duration if wav_duration > 0 else 0.1
             end_time = time.time() -start_time
             generate_chapter_audio_time += end_time
             print(f"给 {novel_name} 的 {chapter_role.get("role_name")} 分配 {chapter_role.get("bind_role_audio_name")}")
             log(f"给 {novel_name} 的 {chapter_role.get("role_name")} 分配 {chapter_role.get("bind_role_audio_name")}")
-            print(f"小说文本：{chapter_text}")
-            log(f"小说文本：{chapter_text}")
             print(f"生成音频的时长：{str(wav_duration)}，用时：{str(end_time)}，RTF：{str( end_time / wav_duration)}，当前进度：{str(index+1)}/{str(len(chapter_role_list))}")
             log(f"生成音频的时长：{str(wav_duration)}，用时：{str(end_time)}，RTF：{str( end_time / wav_duration)}，当前进度：{str(index+1)}/{str(len(chapter_role_list))}")
             
@@ -721,5 +879,7 @@ if __name__ == '__main__':
     #     # 如果角色不存在，则添加角色
     #     if old_role is None:
     #         print(f"扫描到当前角色名 {role_name} 不在数据表中，添加数据：")
+    result = extract_dialogue_and_narration("盛元瑶：「」")
+    print("「」".__contains__('「'))
     pass
 
