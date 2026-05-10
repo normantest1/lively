@@ -195,16 +195,14 @@
         <el-button
           type="primary"
           :loading="ttsLoading"
-          :disabled="ttsStatus !== 'stopped'"
-          @click="handleLoadModel"
+          disabled
         >
           加载模型
         </el-button>
         <el-button
           type="danger"
           :loading="ttsLoading"
-          :disabled="ttsStatus !== 'loaded'"
-          @click="handleStopModel"
+          disabled
         >
           停止模型
         </el-button>

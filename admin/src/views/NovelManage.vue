@@ -81,7 +81,7 @@
       <el-pagination
         v-model:current-page="pagination.page"
         v-model:page-size="pagination.pageSize"
-        :page-sizes="[10, 20, 50, 100]"
+        :page-sizes="[10, 20, 50, 100, 200, 500]"
         :total="pagination.total"
         layout="total, sizes, prev, pager, next, jumper"
         @size-change="handleSizeChange"
@@ -208,7 +208,8 @@
           <el-input-number
             v-model="generateForm.thread_count"
             :min="1"
-            :max="32"
+            :max="1"
+            :disabled="true"
             style="width: 100%"
           />
         </el-form-item>
@@ -273,7 +274,8 @@
           <el-input-number
             v-model="batchForm.thread_count"
             :min="1"
-            :max="32"
+            :max="1"
+            :disabled="true"
             style="width: 100%"
           />
         </el-form-item>
@@ -467,7 +469,7 @@ const generateDialogVisible = ref(false)
 const generateForm = reactive({
   novel_name: '',
   chapter_count: 1,
-  thread_count: 2,
+  thread_count: 1,
   max_chapter_count: null
 })
 
