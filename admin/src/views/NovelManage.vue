@@ -78,16 +78,31 @@
         </el-table-column>
       </el-table>
 
-      <el-pagination
-        v-model:current-page="pagination.page"
-        v-model:page-size="pagination.pageSize"
-        :page-sizes="[10, 20, 50, 100, 200, 500]"
-        :total="pagination.total"
-        layout="total, sizes, prev, pager, next, jumper"
-        @size-change="handleSizeChange"
-        @current-change="handlePageChange"
-        style="margin-top: 20px; justify-content: flex-end;"
-      />
+      <div class="pagination-container">
+        <div class="custom-page-size">
+          <span>每页显示：</span>
+          <el-input-number
+            v-model="pagination.pageSize"
+            :min="1"
+            :max="1000"
+            :step="10"
+            size="small"
+            controls-position="right"
+            @change="handleSizeChange"
+          />
+          <span>条</span>
+        </div>
+        <el-pagination
+          v-model:current-page="pagination.page"
+          :page-size="pagination.pageSize"
+          :total="pagination.total"
+          layout="prev, pager, next"
+          @current-change="handlePageChange"
+        />
+        <div class="pagination-info">
+          共 {{ pagination.total }} 条
+        </div>
+      </div>
 
       <!-- 执行状态显示区域 -->
       <el-card v-if="showLogArea" class="log-card" style="margin-top: 20px;">
@@ -1067,5 +1082,30 @@ const handleConfirmDelete = async () => {
   margin-top: 0;
   color: #909399;
   font-size: 12px;
+}
+
+.pagination-container {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  margin-top: 20px;
+  gap: 20px;
+}
+
+.custom-page-size {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #606266;
+}
+
+.custom-page-size .el-input-number {
+  width: 100px;
+}
+
+.pagination-info {
+  font-size: 14px;
+  color: #606266;
 }
 </style>
