@@ -679,10 +679,10 @@ async def async_parse_text(novel_name=None, chapter_count=None, thread_count=Non
                 content = content[7:]
             if content.endswith('```'):
                 content = content[:-3]
-            print("*"*90)
-            print("解析的内容：")
-            print(content)
-            print("*" * 90)
+            # print("*"*90)
+            # print("解析的内容：")
+            # print(content)
+            # print("*" * 90)
             parse_text_json = json.loads(content)
                 # 查询最大章节次数
             role_chapter_max = Role.select().where(
