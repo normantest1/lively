@@ -1,9 +1,9 @@
 {
     "database_name": "lively_database",
-    "api_key": "hkhkjhkj",
-    "base_url": "https://api.openai.com/v1",
-    "model_name": "gpt-3.5-turbo",
-    "max_token": 20480,
+    "api_key": "sk-cp-C_RwZdmX03zKy8jIdfyGmI3hhIf6Intjp_QK260tzniW13WRcM6TG4K9pIrMolwJ7ltt3-1qEjrECqN9eronzokiSEy6SFXm9cAXezsJGnfo0UjE9Ce6g_Q",
+    "base_url": "https://api.minimaxi.com/v1",
+    "model_name": "MiniMax-M2.7",
+    "max_token": 80960,
     "max_section_length": 3000,
     "preload_role_count": 116,
     "rtf_threshold": 0.8,

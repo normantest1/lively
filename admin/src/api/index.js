@@ -72,6 +72,11 @@ export default {
       params: { novel_name: novelName }
     }).then(res => res.data)
   },
+  getPendingParseCount(novelName) {
+    return apiClient.get('/novel/pending-parse-count', {
+      params: { novel_name: novelName }
+    }).then(res => res.data)
+  },
   batchGenerateNovel(novelName, chapterCount, threadCount = 2) {
     return apiClient.post('/novels/batch-generate', null, {
       params: {

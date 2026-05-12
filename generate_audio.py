@@ -19,8 +19,6 @@ ROOT_DIR = Path(__file__).resolve().parent
 
 import json
 import os
-import anthropic
-
 from bean.beans import Novel, NovelName, get_db, Role
 
 import concurrent.futures

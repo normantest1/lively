@@ -46,7 +46,7 @@ python api.py
 6. 访问
 之后访问 http://127.0.0.1:6888
 ##### 访问后台管理系统后
-1. 软件得使用支持Anthropic API的AI分析文本，所以在设置页面添加大模型的api_key、model_name和base_url
+1. 软件得使用支持OpenAI API的AI分析文本，所以在设置页面添加大模型的api_key、model_name和base_url
 2. 上传小说
 3. 在角色音频管理点击刷新
 4. 在角色管理为旁白绑定角色音频

@@ -712,6 +712,20 @@ def get_max_chapter_count(novel_name: str = Query(..., description="小说名称
         return 0
 
 
+@app.get("/api/novel/pending-parse-count")
+def get_pending_parse_count(novel_name: str = Query(..., description="小说名称")):
+    """获取指定小说在current_state=1（待解析）时的章节数"""
+    try:
+        count = Novel.select().where((Novel.novel_name == novel_name) & (Novel.current_state == 1)).count()
+
+        return count
+    except Exception as e:
+        print(f"获取待解析章节数失败: {e}")
+        log(f"获取待解析章节数失败: {e}")
+        log_error(f"获取待解析章节数失败: {str(e)}")
+        return 0
+
+
 @app.post("/api/novels/batch-generate")
 async def batch_generate_novel(novel_name: str, chapter_count: int, thread_count: int = 2):
     """批量生成小说音频 - 多线程队列模式

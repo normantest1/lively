@@ -12,7 +12,7 @@ ROOT_DIR = Path(__file__).resolve().parent
 
 import json
 import os
-import anthropic
+import openai
 
 from bean.beans import Novel, NovelName, get_db, Role
 
@@ -22,6 +22,30 @@ import asyncio
 import time
 import traceback
 import queue
+import re
+
+def clean_thinking_content(text: str) -> str:
+    """
+    清理文本中的思考内容，只保留回复内容
+    移除 <thinking>...</thinking> 等思考标签及其内容
+    """
+    if not text:
+        return text
+    # 移除 <think>...</think> 标签及内容
+    text = re.sub(r'<think>[\s\S]*?</think>', '', text, flags=re.IGNORECASE)
+    # 移除 <thinking>...</thinking> 标签及内容
+    text = re.sub(r'<thinking>[\s\S]*?</thinking>', '', text, flags=re.IGNORECASE)
+
+    # 移除 <thought>...</thought> 标签及内容
+    text = re.sub(r'<thought>[\s\S]*?</thought>', '', text, flags=re.IGNORECASE)
+
+    # 移除 <思考>...</思考> 标签及内容
+    text = re.sub(r'<思考>[\s\S]*?</思考>', '', text, flags=re.IGNORECASE)
+
+    # 清理可能的空行
+    text = text.strip()
+
+    return text
 
 # ============ 全局日志系统 ============
 # 线程安全的日志队列
@@ -93,9 +117,9 @@ class Config:
 """
 config.json 示例:
 {
-    "api_key": "sk-ant-api03-xxx",
-    "base_url": "https://api.anthropic.com",
-    "model_name": "claude-3-5-sonnet-20241022",
+    "api_key": "sk-xxx",
+    "base_url": "https://api.openai.com/v1",
+    "model_name": "gpt-4o",
     "max_concurrent_requests": 5,
     "timeout": 120
 }
@@ -108,7 +132,7 @@ config.json 示例:
 # ============ 动态并发处理器（修改版） ============
 class DynamicConcurrentProcessor:
     """
-    使用 Anthropic SDK 的动态并发处理器
+    使用 OpenAI SDK 的动态并发处理器
     - 始终保持固定数量的并发请求
     - 一个请求完成，立即启动下一个
     - 自动管理任务队列
@@ -118,10 +142,10 @@ class DynamicConcurrentProcessor:
     def __init__(self, config: Config):
         self.config = config
 
-        # 初始化 Anthropic 客户端
-        self.client = anthropic.Anthropic(
+        # 初始化 OpenAI 客户端
+        self.client = openai.OpenAI(
             api_key=config.get("api_key"),
-            base_url=config.get("base_url", "https://api.anthropic.com")
+            base_url=config.get("base_url", "https://api.openai.com/v1")
         )
 
         # 获取配置参数
@@ -174,7 +198,7 @@ class DynamicConcurrentProcessor:
 
     async def send_request(self, task_id: int, text: str, db_id: int = None) -> Dict:
         """
-        发送单个请求到 Anthropic API
+        发送单个请求到 OpenAI API
         使用线程池执行流式请求，避免阻塞事件循环
         """
 
@@ -182,20 +206,26 @@ class DynamicConcurrentProcessor:
             """同步的流式请求函数"""
             full_response_text = ""
             try:
-                with self.client.messages.stream(
-                        model=self.model_name,
-                        max_tokens=204800,
-                        messages=[
-                            {
-                                "role": "user",
-                                "content": text
-                            }
-                        ],
-                        system="你是一位小说信息识别请，请解析我发给你的规则和json文本，只需要将json结果返回给我即可，请注意，你只需要发送纯粹的json字符串即可，不需要md格式的，我需要配合程序解析,请不用返回你思考的内容或关闭思考模式，我想提升速度",
-                        thinking={"type": "disabled"}
-                ) as stream:
-                    for chunk in stream.text_stream:
-                        full_response_text += chunk
+                response = self.client.chat.completions.create(
+                    model=self.model_name,
+                    messages=[
+                        {
+                            "role": "system",
+                            "content": "你是一位小说信息识别请，请解析我发给你的规则和json文本，只需要将json结果返回给我即可，请注意，你只需要发送纯粹的json字符串即可，不需要md格式的，我需要配合程序解析"
+                        },
+                        {
+                            "role": "user",
+                            "content": text
+                        }
+                    ],
+                    max_tokens=load_config(config_path,"max_token") or 80960,
+                    stream=True
+                )
+                for chunk in response:
+                    if chunk.choices and chunk.choices[0].delta.content:
+                        full_response_text += chunk.choices[0].delta.content
+                # 清理思考内容
+                full_response_text = clean_thinking_content(full_response_text)
                 return full_response_text
             except Exception as e:
                 raise e
@@ -649,6 +679,10 @@ async def async_parse_text(novel_name=None, chapter_count=None, thread_count=Non
                 content = content[7:]
             if content.endswith('```'):
                 content = content[:-3]
+            print("*"*90)
+            print("解析的内容：")
+            print(content)
+            print("*" * 90)
             parse_text_json = json.loads(content)
                 # 查询最大章节次数
             role_chapter_max = Role.select().where(

@@ -276,21 +276,24 @@
             placeholder="请选择小说"
             filterable
             style="width: 100%"
+            @change="handleBatchNovelNameChange"
           >
             <el-option
-              v-for="name in novelNamesList"
+              v-for="name in availableBatchAnalyzeNovels"
               :key="name"
               :label="name"
               :value="name"
             />
           </el-select>
+          <span v-if="availableBatchAnalyzeNovels.length === 0" style="color: #909399; font-size: 12px; margin-top: 5px;">
+            暂无待解析的小说（所有小说章节都已解析）
+          </span>
         </el-form-item>
         <el-form-item label="线程数" required>
           <el-input-number
             v-model="batchForm.thread_count"
             :min="1"
-            :max="1"
-            :disabled="true"
+            :max="20"
             style="width: 100%"
           />
         </el-form-item>
@@ -298,8 +301,17 @@
           <el-input-number
             v-model="batchForm.chapter_count"
             :min="1"
+            :max="batchForm.max_chapter_count || 9999"
             style="width: 100%"
           />
+          <el-button
+            type="text"
+            style="margin-left: 10px;"
+            @click="handleSetMaxBatchChapter"
+            :disabled="!batchForm.max_chapter_count"
+          >
+            最大: {{ batchForm.max_chapter_count || '—' }}
+          </el-button>
         </el-form-item>
       </el-form>
       <template #footer>
@@ -494,8 +506,11 @@ const chapterStatsData = ref([])
 const batchForm = reactive({
   novel_name: '',
   thread_count: 1,
-  chapter_count: 1
+  chapter_count: 1,
+  max_chapter_count: null
 })
+
+const availableBatchAnalyzeNovels = ref([])
 
 const queryForm = reactive({
   novel_name: '',
@@ -880,7 +895,53 @@ const stopHeartbeat = () => {
 }
 
 const handleBatchAnalyze = async () => {
+  // 加载有待解析章节的小说列表
+  await loadAvailableBatchAnalyzeNovels()
+  batchForm.novel_name = ''
+  batchForm.chapter_count = 1
+  batchForm.max_chapter_count = null
   batchDialogVisible.value = true
+}
+
+const loadAvailableBatchAnalyzeNovels = async () => {
+  try {
+    const names = await api.getNovelNamesList()
+    // 过滤出有待解析章节（状态=1）的小说
+    const available = []
+    for (const name of names) {
+      const pendingCount = await api.getPendingParseCount(name)
+      if (pendingCount > 0) {
+        available.push(name)
+      }
+    }
+    availableBatchAnalyzeNovels.value = available
+  } catch (error) {
+    console.error('加载待解析小说列表失败:', error)
+    availableBatchAnalyzeNovels.value = []
+  }
+}
+
+const handleBatchNovelNameChange = async (novelName) => {
+  if (!novelName) {
+    batchForm.max_chapter_count = null
+    batchForm.chapter_count = 1
+    return
+  }
+
+  try {
+    const pendingCount = await api.getPendingParseCount(novelName)
+    batchForm.max_chapter_count = pendingCount
+    batchForm.chapter_count = 1
+  } catch (error) {
+    console.error('获取待解析章节数失败:', error)
+    batchForm.max_chapter_count = null
+  }
+}
+
+const handleSetMaxBatchChapter = () => {
+  if (batchForm.max_chapter_count) {
+    batchForm.chapter_count = batchForm.max_chapter_count
+  }
 }
 
 const handleBatchSubmit = async () => {
