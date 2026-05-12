@@ -10,13 +10,15 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 from apscheduler.jobstores.memory import MemoryJobStore
 from bean.beans import Novel, ScheduledTask, WatchdogTask, get_db
-from nanovllm_voxcpm import VoxCPM
+# from nanovllm_voxcpm import VoxCPM
 from parse_text import async_parse_text, parse_novel_data_bind_role_audio
 from generate_audio import load_role_audio, generate_chapter_audio
 from logger import log as logger_log, log_error as logger_log_error
 from utils.config import load_config
 import asyncio
 import concurrent.futures
+
+from zipvoice.luxvoice import LuxTTS
 
 config_path = Path(__file__).resolve().parent / "config/lively_config.json"
 
@@ -1032,15 +1034,16 @@ async def execute_multithread_generate_task(job_id: str, novel_name: str, chapte
                     if log_callback:
                         await log_callback("[看门狗] 🔄 重新加载VoxCPM模型...\n")
                     # 重新加载模型
-                    server_instance = VoxCPM.from_pretrained(
-                        "./VoxCPM1.5/",
-                        max_num_batched_tokens=8192,
-                        max_num_seqs=16,
-                        max_model_len=4096,
-                        gpu_memory_utilization=0.95,
-                        enforce_eager=False,
-                        devices=[0]
-                    )
+                    server_instance = LuxTTS('./LuxTTS/', device='cuda')
+                    # server_instance = VoxCPM.from_pretrained(
+                    #     "./VoxCPM1.5/",
+                    #     max_num_batched_tokens=8192,
+                    #     max_num_seqs=16,
+                    #     max_model_len=4096,
+                    #     gpu_memory_utilization=0.95,
+                    #     enforce_eager=False,
+                    #     devices=[0]
+                    # )
                     set_server_instance(server_instance)
                     # 等待resume_wait秒后恢复任务
                     log_info(f"⏳ 等待{resume_wait}秒后恢复任务...")
@@ -1422,17 +1425,18 @@ async def handle_high_rtf(log_callback=None):
         if log_callback:
             await log_callback(f"[RTF处理] 🔄 重新加载模型...\n")
 
-        from nanovllm_voxcpm import VoxCPM
-
-        new_server = VoxCPM.from_pretrained(
-            "./VoxCPM1.5/",
-            max_num_batched_tokens=8192,
-            max_num_seqs=16,
-            max_model_len=4096,
-            gpu_memory_utilization=0.95,
-            enforce_eager=False,
-            devices=[0]
-        )
+        # from nanovllm_voxcpm import VoxCPM
+        #
+        # new_server = VoxCPM.from_pretrained(
+        #     "./VoxCPM1.5/",
+        #     max_num_batched_tokens=8192,
+        #     max_num_seqs=16,
+        #     max_model_len=4096,
+        #     gpu_memory_utilization=0.95,
+        #     enforce_eager=False,
+        #     devices=[0]
+        # )
+        new_server = LuxTTS('./LuxTTS/', device='cuda')
 
         # 5. 更新全局 server 实例
         server_instance = new_server

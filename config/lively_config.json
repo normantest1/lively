@@ -1,16 +1,17 @@
 {
     "database_name": "lively_database",
-    "api_key": "",
-    "base_url": "",
-    "model_name": "",
+    "api_key": "hkhkjhkj",
+    "base_url": "https://api.openai.com/v1",
+    "model_name": "gpt-3.5-turbo",
     "max_token": 20480,
     "max_section_length": 3000,
     "preload_role_count": 116,
     "rtf_threshold": 0.8,
-    "watchdog_auto_recovery": true,
+    "watchdog_auto_recovery": false,
     "watchdog_reload_wait_seconds": 60,
     "watchdog_resume_wait_seconds": 120,
     "watchdog_log_check_lines": 10,
     "inference_steps": 6,
-    "speech_speed": 0.9
+    "speech_speed": 0.9,
+    "bind_audio_presence_rate": 0.1
 }

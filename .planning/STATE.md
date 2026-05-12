@@ -63,5 +63,7 @@ See: .planning/PROJECT.md (updated 2026-03-30)
 |---|-------------|------|--------|--------|-----------|
 | 260402-m5l | 添加TTS模型控制按钮 | 2026-04-02 | 9aa9ec0 | Verified | [260402-m5l-tts](./quick/260402-m5l-tts/) |
 | 260403-msj | 添加全部小说解析功能 | 2026-04-03 | ec2dfe0 | Verified | [260403-msj](./quick/260403-msj/) |
+| 260510-audio-settings | 添加音频生成推理步数和语音速度设置 | 2026-05-10 | f4bf472 | Verified | [260510-audio-settings](./quick/260510-audio-settings/) |
+| 260510-ui-disable | 禁用音频线程数设置、模型控制按钮、扩展分页选项 | 2026-05-10 | 91bfd67 | Verified | [260510-ui-disable](./quick/260510-ui-disable/) |
 
-Last activity: 2026-04-03 - Completed quick task 260403-msj: 添加全部小说解析功能
+Last activity: 2026-05-10 - Completed quick task 260510-ui-disable: 禁用音频线程数设置、模型控制按钮，扩展分页选项

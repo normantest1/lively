@@ -454,9 +454,13 @@ def split_novel_text_by_content_list(novel_content_list,novel_name):
 
 if __name__ == '__main__':
     # TODO 添加数据时，得判断小说名是否存在
-    novel_path = "望长天2.txt"
-    novel_name = novel_path.replace(".txt", "")
-    # novel_path = "D:\\Projects\\Python\\lively\\utils\\test.txt"
-    with open(novel_path, "r", encoding="utf-8") as f:
-        novel_text_list = f.readlines()
-    split_novel_text_by_content_list(novel_text_list, novel_name)
+    # novel_path = "望长天2.txt"
+    # novel_name = novel_path.replace(".txt", "")
+    # # novel_path = "D:\\Projects\\Python\\lively\\utils\\test.txt"
+    # with open(novel_path, "r", encoding="utf-8") as f:
+    #     novel_text_list = f.readlines()
+    # split_novel_text_by_content_list(novel_text_list, novel_name)
+    with open("万族之劫.txt", "r", encoding="utf-8") as f:
+        text_lines = f.readlines()
+
+    split_novel_text_by_content_list(text_lines,"万族之劫")

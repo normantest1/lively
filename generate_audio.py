@@ -332,6 +332,8 @@ async def load_role_audio(novel_name,lux_tts):
     try:
         # 加载配置信息
         load_role_count = load_config(config_path,"preload_role_count")
+        print(f"正在预加载配置中的 {load_role_count} 个音频角色")
+        log(f"正在预加载配置中的 {load_role_count} 个音频角色")
         audio_role_list = RoleAudio.select().limit(load_role_count)
         load_role_list = []
         ref_duration = 1000
@@ -341,7 +343,7 @@ async def load_role_audio(novel_name,lux_tts):
                 audio_role.audio_path,
                 duration=ref_duration,
                 rms=rms,
-                prompt_text=audio_role.audio_text
+                prompt_text=extract_chinese(audio_role.audio_text)
             )
             tmep_role = {
                 "audio_role_name": audio_role.role_name,
@@ -642,11 +644,13 @@ async def generate_chapter_audio(chapter_role_list,role_audio_id,novel_name,nove
                 generate_chapter_audio_duration += wav_duration
             #生成角色声音
             elif chapter_role.get("type") == "role":
-                role_name = chapter_role.get("role_name")
+                role_name = chapter_role.get("bind_role_audio_name")
                 role_prompt_id = ""
                 for prompt_id in role_audio_id:
                     #如果生成的角色声音在预加载的角色声音列表里面，则加载角色音频id
                     if role_name == prompt_id.get("audio_role_name"):
+                        print(f"找到音频角色：{role_name}，为它预先绑定音频")
+                        log(f"找到音频角色：{role_name}，为它预先绑定音频")
                         role_prompt_id = prompt_id.get("prompt_id")
                         break
                     #如果不存在角色预加载音频里面，则从根据角色名数据库预加载
@@ -659,6 +663,8 @@ async def generate_chapter_audio(chapter_role_list,role_audio_id,novel_name,nove
                     }]
                     """
                 if role_prompt_id == "":
+                    print(f"找不到音频角色：{role_name}，正在加载音频角色")
+                    log(f"找不到音频角色：{role_name}，正在加载音频角色")
                     role_audio_data = RoleAudio.get(role_name=chapter_role.get("bind_role_audio_name"))
                     role_prompt_id = lux_tts.encode_prompt(role_audio_data.audio_path, duration=ref_duration, rms=rms,
                                                            prompt_text=extract_chinese(role_audio_data.audio_text))

@@ -70,7 +70,7 @@
           <el-input-number
             v-model="formData.preload_role_count"
             :min="1"
-            :max="100"
+            :max="1000"
             :step="1"
             style="width: 100%"
           />
