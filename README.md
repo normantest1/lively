@@ -1,30 +1,28 @@
-# lively
+# lively-luxtts
 
-　　这是一个小说音频生成软件。它能分解txt小说的章节，根据不同的角色，生成不同音色的音频。生成音频的RTF速度（rtx 4070 laptop）是0.17 - 0.3之间，生成3000字的章节，最快只需100秒。
+　　这是一个小说音频生成软件。它能分解txt小说的章节，根据不同的角色，生成不同音色的音频。生成音频的RTF速度（rtx 4070 laptop）是0.05-0.15间，生成3000字的章节，最快只需30秒。
 ![管理界面](https://github.com/normantest1/lively/blob/325c914f2b0886e672b94f76964871015d601389/asset/lively%E6%BC%94%E7%A4%BA.gif)
 
 # 如何使用它
-本项目环境只能在Linux下运行，windows用户可以用WSL运行
+本项目可以再linux/windows下运行
 > python >= 3.12
 > 
 > pytorch = 2.10
 > 
 > cuda = 12.8
-1. 项目使用nanovllm-voxcpm作为小说音频生成的，所以得先构建该tts环境
+1. 克隆项目
 ```shell
-#克隆nanovllm-voxcpm项目
-git clone https://github.com/a710128/nanovllm-voxcpm.git
+#克隆本项目
+git clone https://github.com/normantest1/lively.git
 #进入目录
-cd nanovllm-voxcpm
-
-pip install nano-vllm-voxcpm
+cd lively
 ```
-2. 将本项目的文件和文件夹粘贴到nanovllm-voxcpm项目里面
-3. 运行pip安装命令
+2. 运行pip安装命令
+
 ```shell
 pip install -r requirements.txt
 ```
-4. 下载模型
+3. 下载模型
 
 下载huggingface_hub
 ```shell
@@ -34,9 +32,9 @@ pip install huggingface_hub
 ```shell
 export HF_ENDPOINT=https://hf-mirror.com
 ```
-下载voxcpm模型
+下载luxtts模型
 ```shell
-huggingface-cli download openbmb/VoxCPM1.5 --local-dir ./VoxCPM1.5/
+hf download YatharthS/LuxTTS --local-dir ./LuxTTS/
 ```
 
 5. 运行
