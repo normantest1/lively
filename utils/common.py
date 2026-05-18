@@ -355,7 +355,7 @@ def split_novel_text_by_content_list(novel_content_list,novel_name):
     if len(novel_content_list) == 0:
         return False
 
-    section_re = re.compile(r'^.*[\s]*[第][0-9零一二三四五六七八九十百千万]+[卷章集回]\s*.{0,20}$')
+    section_re = re.compile(r'^.*[\s]*[第][0-9零一二两三四五六七八九十百千万]+[卷章集回]\s*.{0,20}$')
     input_novel_text_list = novel_content_list
 
     temp_max_section_text_list = []
@@ -460,7 +460,7 @@ if __name__ == '__main__':
     # with open(novel_path, "r", encoding="utf-8") as f:
     #     novel_text_list = f.readlines()
     # split_novel_text_by_content_list(novel_text_list, novel_name)
-    with open("万族之劫.txt", "r", encoding="utf-8") as f:
-        text_lines = f.readlines()
+    section_re = re.compile(r'^.*[\s]*[第][0-9零一二三四五六七八九十百千万两仨]+[卷章集回]\s*.{0,20}$')
+    print(re.match(section_re, "第一千三百零一章不断出现的死讯"))
+    print(re.match(section_re, "第一千两百章小王下棋"))
 
-    split_novel_text_by_content_list(text_lines,"万族之劫")
