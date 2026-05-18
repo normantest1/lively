@@ -1,8 +1,8 @@
 {
     "database_name": "lively_database",
     "api_key": "",
-    "base_url": "",
-    "model_name": "",
+    "base_url": "https://api.minimaxi.com/v1",
+    "model_name": "MiniMax-M2.7",
     "max_token": 80960,
     "max_section_length": 3000,
     "preload_role_count": 116,
