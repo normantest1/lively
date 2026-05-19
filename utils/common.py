@@ -359,6 +359,7 @@ def split_novel_text_by_content_list(novel_content_list,novel_name):
         r'^[　]{0,20}[\s]*[第][0-9零一二两三四五六七八九十百千万]+[卷章集回]\s*.{0,15}$'
         r'^[　]{0,20}[\s]*[0-9零一二两三四五六七八九十百千万]+[卷章集回]\s*.{0,15}$',
         r'^[　]{0,20}[\s]*[0-9零一二两三四五六七八九十百千万]+[、]\s*.{0,15}$',
+        r'^[　]{0,20}[\s]*[0-9零一二两三四五六七八九十百千万]+\s+.{0,15}$',
     ]
     section_re = re.compile("|".join(TITLE_PATTERNS), re.MULTILINE)
     input_novel_text_list = novel_content_list
@@ -374,7 +375,7 @@ def split_novel_text_by_content_list(novel_content_list,novel_name):
 
     for (index, line) in enumerate(input_novel_text_list):
         if re.match(section_re, line):
-            line = re.sub(r'\s+', ' ', line)
+            # line = re.sub(r'\s+', ' ', line)
             chapter_name = re.sub('(~+|\\*+|\\,+|\\?+|\\，+|\\?+)', '_', line)
             if len(chapter_text_list) == 0:
                 chapter_text_list.append(chapter_name)
@@ -463,6 +464,7 @@ def split_novel_text_by_content_list_test(novel_content_list):
         r'^[　]{0,20}[\s]*[第][0-9零一二两三四五六七八九十百千万]+[卷章集回]\s*.{0,15}$'
         r'^[　]{0,20}[\s]*[0-9零一二两三四五六七八九十百千万]+[卷章集回]\s*.{0,15}$',
         r'^[　]{0,20}[\s]*[0-9零一二两三四五六七八九十百千万]+[、]\s*.{0,15}$',
+        r'^[　]{0,20}[\s]*[0-9零一二两三四五六七八九十百千万]+\s+.{0,15}$',
     ]
     section_re = re.compile("|".join(TITLE_PATTERNS),re.MULTILINE)
     input_novel_text_list = novel_content_list
@@ -558,7 +560,7 @@ if __name__ == '__main__':
     # with open(novel_path, "r", encoding="utf-8") as f:
     #     novel_text_list = f.readlines()
     # split_novel_text_by_content_list(novel_text_list, novel_name)
-    with open("夜的命名术(会说话的肘子).txt","r", encoding="utf-8") as f:
+    with open("我！清理员！(鱼狱圄).txt","r", encoding="utf-8") as f:
         file_lines = f.readlines()
         chapter_name_list = []
     chapter_name_list = split_novel_text_by_content_list_test(file_lines)
