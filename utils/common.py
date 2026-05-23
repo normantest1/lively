@@ -358,8 +358,8 @@ def split_novel_text_by_content_list(novel_content_list,novel_name):
     TITLE_PATTERNS = [
         r'^[　]{0,20}[\s]*[第][0-9零一二两三四五六七八九十百千万]+[卷章集回]\s*.{0,15}$'
         r'^[　]{0,20}[\s]*[0-9零一二两三四五六七八九十百千万]+[卷章集回]\s*.{0,15}$',
-        r'^[　]{0,20}[\s]*[0-9零一二两三四五六七八九十百千万]+[、]\s*.{0,15}$',
-        r'^[　]{0,20}[\s]*[0-9零一二两三四五六七八九十百千万]+\s+.{0,15}$',
+        r'^[　]{0,20}[\s]*[0-9]+[、]\s*.{0,15}$',
+        r'^[　]{0,20}[\s]*[0-9]+\s+.{0,15}$',
     ]
     section_re = re.compile("|".join(TITLE_PATTERNS), re.MULTILINE)
     input_novel_text_list = novel_content_list

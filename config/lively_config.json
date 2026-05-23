@@ -1,6 +1,6 @@
 {
     "database_name": "lively_database",
-    "api_key": "",
+    "api_key": "sk-cp-Ucy_-B-R53NyX2LNNOl1X8pdPyuxvZiwEuufxQwFEH5PkNyymTlZu49K1VZ2jCjwphTIxiAse18lNq2rHh7w6fdakbEzfRgzf_jWVQ-Z_ar2zVE6NcEfkGk",
     "base_url": "https://api.minimaxi.com/v1",
     "model_name": "MiniMax-M2.7",
     "max_token": 80960,
