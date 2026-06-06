@@ -168,6 +168,13 @@ class RoleAudioResponse(RoleAudioBase):
 
     model_config = ConfigDict(from_attributes=True)
 
+
+class RoleAudioWithBindResponse(RoleAudioResponse):
+    """绑定音频下拉框使用的响应模型"""
+    bound_novel_role_name: Optional[str] = PydanticField(None, title="当前小说中绑定该音频的小说角色名")
+    is_bound_in_novel: bool = PydanticField(False, title="当前小说中是否已绑定小说角色")
+
+
 class PaginatedRoleAudioResponse(BaseModel):
     items: List[RoleAudioResponse]
     total: int
@@ -1656,37 +1663,50 @@ def create_roles_bulk(roles_data: List[RoleCreate]):
     return created_roles
 
 
-@app.get("/api/role-audio/unbound", response_model=List[RoleAudioResponse])
+@app.get("/api/role-audio/unbound", response_model=List[RoleAudioWithBindResponse])
 def get_unbound_role_audios(novel_name: str = Query(..., description="小说名称")):
-    """获取未绑定的角色音频列表，用于角色绑定音频功能
+    """
+    获取用于角色绑定音频下拉框的音频角色列表
 
     功能说明：
-    1. 根据传入的小说名，从Role表中查询该小说已绑定音频的角色名（bind_audio_name）
-    2. 在RoleAudio表中查询role_name不在上述绑定列表的所有音频
-    3. 返回这些未绑定的音频列表给前端
+    1. 获取全部音频角色（RoleAudio 表中所有记录）
+    2. 关联查询当前小说中已绑定到该音频的小说角色名（Role.bind_audio_name -> role_name）
+    3. 标注每个音频角色在当前小说中是否已绑定小说角色以及对应的小说角色名
+    4. 排序：未绑定小说角色的音频在前，已绑定小说角色的音频在后；组内按音频角色创建时间倒序
     """
-    # 根据小说名查询已绑定音频的角色名
-    bound_audio_names = [
-        role.bind_audio_name
-        for role in Role.select(Role.bind_audio_name).where(
-            Role.novel_name == novel_name,
-            Role.bind_audio_name.is_null(False)
-        )
-        if role.bind_audio_name
-    ]
+    # 查询当前小说中所有已绑定音频的角色，构建 bind_audio_name -> role_name 的映射
+    bind_map: dict = {}
+    for role in Role.select(Role.bind_audio_name, Role.role_name).where(
+        Role.novel_name == novel_name,
+        Role.bind_audio_name.is_null(False)
+    ):
+        if role.bind_audio_name:
+            bind_map[role.bind_audio_name] = role.role_name
 
-    # 查询不在绑定列表中的音频
-    query = RoleAudio.select()
+    # 获取全部音频角色，按创建时间倒序（用于组内稳定排序）
+    all_audios = list(RoleAudio.select().order_by(RoleAudio.create_time.desc()))
 
-    # 如果有绑定的音频，排除它们
-    if bound_audio_names:
-        # 使用 ~ 表示NOT，~fn.IN表示不在列表中
-        from peewee import fn
-        query = query.where(~(RoleAudio.role_name.in_(bound_audio_names)))
+    # 组装结果
+    result = []
+    for audio in all_audios:
+        bound_novel_role_name = bind_map.get(audio.role_name)
+        result.append(RoleAudioWithBindResponse(
+            id=audio.id,
+            role_name=audio.role_name,
+            audio_path=audio.audio_path,
+            gender=audio.gender,
+            audio_text=audio.audio_text,
+            citation_count=audio.citation_count or 0,
+            audio_uri=audio.audio_uri,
+            create_time=audio.create_time,
+            bound_novel_role_name=bound_novel_role_name,
+            is_bound_in_novel=bound_novel_role_name is not None,
+        ))
 
-    query = query.order_by(RoleAudio.create_time.desc())
+    # 稳定排序：未绑定小说角色的音频在前（False < True），组内保持创建时间倒序
+    result.sort(key=lambda x: x.is_bound_in_novel)
 
-    return list(query)
+    return result
 
 
 @app.post("/api/novels/upload-batch")

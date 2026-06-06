@@ -461,7 +461,8 @@ def extract_dialogue_and_narration(text: str) -> list:
     # 定义对话符号对：开始符号 → 结束符号
     quote_pairs = {
         '「': '」',
-        '"': '"'
+        '"': '"',
+        '“':'”'
     }
     result = []
     start = 0
@@ -513,6 +514,65 @@ def extract_dialogue_and_narration(text: str) -> list:
 
     return result
 
+
+def number_to_chinese(num_str):
+    """把数字字符串转为正确的中文数字（支持多位数）"""
+    digit_map = {
+        '0': '零', '1': '一', '2': '二', '3': '三', '4': '四',
+        '5': '五', '6': '六', '7': '七', '8': '八', '9': '九'
+    }
+    unit_map = ['', '十', '百', '千', '万', '十万', '百万', '千万', '亿']
+
+    num_str = num_str.strip()
+    if not num_str.isdigit():
+        return num_str
+
+    num_len = len(num_str)
+    chinese = ''
+    zero_flag = False
+
+    for i, n in enumerate(num_str):
+        pos = num_len - i - 1
+        if n != '0':
+            if zero_flag:
+                chinese += '零'
+            chinese += digit_map[n] + unit_map[pos]
+            zero_flag = False
+        else:
+            zero_flag = True
+
+    chinese = chinese.replace('一十', '十')
+    chinese = chinese.rstrip('零')
+    return chinese if chinese else '零'
+
+
+def convert_text(text):
+    # 1. 替换运算符
+    op_map = {'+': '加', '-': '减', '*': '乘', '/': '除以', '=': '等于'}
+    for k, v in op_map.items():
+        text = text.replace(k, v)
+
+    # 2. 处理百分号 %
+    import re
+    text = re.sub(r'(\d+)%', lambda m: f'百分之{number_to_chinese(m.group(1))}', text)
+
+    # 3. 剩余数字转中文
+    text = re.sub(r'(\d+)', lambda m: number_to_chinese(m.group(1)), text)
+
+    # ====================== 修复点：保留所有中文 + 你指定的符号 ======================
+    def is_allowed_char(c):
+        # 允许：所有中文字符 + 大小写英文字母 + 你指定的标点符号
+        allowed_punct = '“”：，。！？《》%（）,.()\'\'""?!「」'
+        return (
+                '\u4e00' <= c <= '\u9fff'  # 所有中文
+                or c.isalpha()  # 所有英文
+                or c in allowed_punct  # 你指定的符号
+        )
+
+    # 过滤非法字符
+    text = ''.join([c for c in text if is_allowed_char(c)])
+    text = text.replace("%","")
+    return text
 async def generate_chapter_audio(chapter_role_list,role_audio_id,novel_name,novel_id,lux_tts,cancel_event=None):
     """
     生成章节音频
@@ -611,7 +671,8 @@ async def generate_chapter_audio(chapter_role_list,role_audio_id,novel_name,nove
             wav_duration = 0
             role_prompt_id = ""
             temp_save_wav_file_path = temp_path / f"{chapter_name}-{index}.wav"
-            chapter_text = chapter_role.get("text").replace("…","").replace("·","").replace("(","").replace(")","").replace("[","").replace("]","").replace("{","").replace("}","").replace("<","").replace(">","").replace("-","").replace("_","").replace("@","").replace("#","").replace("*","").replace("\\","").replace("|","").replace("~","").replace("`","").replace(".","").replace("　","").replace("　","").replace("—","")
+            # chapter_text = chapter_role.get("text").replace("…","").replace("·","").replace("(","").replace(")","").replace("[","").replace("]","").replace("{","").replace("}","").replace("<","").replace(">","").replace("-","").replace("_","").replace("@","").replace("#","").replace("*","").replace("\\","").replace("|","").replace("~","").replace("`","").replace(".","").replace("　","").replace("　","").replace("—","")
+            chapter_text = convert_text(chapter_role.get("text"))
             if chapter_text == "":
                 continue
             buf = []
@@ -678,7 +739,7 @@ async def generate_chapter_audio(chapter_role_list,role_audio_id,novel_name,nove
                 for result_index,result_text in enumerate(result_list):
                     print(f"分割的文本：{result_text}")
                     #该文本为角色朗读的语句
-                    if result_text.__contains__("“") or result_text.__contains__('"') or result_text.__contains__('「') :
+                    if len(result_list) == 1 or result_text.__contains__("“") or result_text.__contains__('"') or result_text.__contains__('「') :
                         print("是角色的语句")
                         result_text = result_text.replace("「", "").replace("」", "").replace("”", "").replace("”","").replace(
                             "？", "").replace("?", "").replace("!", "").replace("！", "")
@@ -883,7 +944,9 @@ if __name__ == '__main__':
     #     # 如果角色不存在，则添加角色
     #     if old_role is None:
     #         print(f"扫描到当前角色名 {role_name} 不在数据表中，添加数据：")
-    result = extract_dialogue_and_narration("盛元瑶：「」")
-    print("「」".__contains__('「'))
+    result = extract_dialogue_and_narration("“去东山游玩？”孟川眉头一凝，说道，“东山太远了，去一趟怕是要在东山过夜了，等明日才能回来。”")
+    print(result)
+    # text = '359%，5+3=8，9/2=4，7*6=42，100%，abc123#@…《测试》__~$3333%^&*()_<>/\{}·`！盛元瑶：「」'
+    # print(convert_text(text))
     pass
 

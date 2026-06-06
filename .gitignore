@@ -10,6 +10,7 @@ admin/node_modules/
 *.db*
 run.bat
 test.json
+小说文本.json
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

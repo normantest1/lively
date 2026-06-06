@@ -143,8 +143,8 @@
           >
             <el-option
               v-for="audio in availableAudios"
-              :key="audio.role_name"
-              :label="`${audio.role_name}，${audio.gender}`"
+              :key="audio.id"
+              :label="formatAudioLabel(audio)"
               :value="audio.role_name"
             />
           </el-select>
@@ -219,6 +219,13 @@ const formatDateTime = (dateTime) => {
   if (!dateTime) return ''
   const date = new Date(dateTime)
   return date.toLocaleString('zh-CN')
+}
+
+const formatAudioLabel = (audio) => {
+  if (audio.bound_novel_role_name) {
+    return `${audio.role_name}，${audio.gender}，绑定的小说角色->${audio.bound_novel_role_name}`
+  }
+  return `${audio.role_name}，${audio.gender}，无`
 }
 
 const loadData = async () => {

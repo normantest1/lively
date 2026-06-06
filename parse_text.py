@@ -880,6 +880,8 @@ def parse_novel_data_bind_role_audio(text_json,parse_text_json,novel_name):
         for role in has_bind_audio_role_name_list:
             # print(role.bind_audio_name)
             has_bind_audio_role_names.append(role.bind_audio_name)
+        # 出场率达不到配置文件数值的配角的绑定音频角色对象，用来保证一整个章节内配角音频相同
+        supporting_role_bind_obj = {}
         #为对应的句子绑定角色音频和类型数据
         for i in range(0,len(text_json_list)):
             for parse_text_json in parse_text_json_list:
@@ -912,7 +914,7 @@ def parse_novel_data_bind_role_audio(text_json,parse_text_json,novel_name):
                                 presence_rate = 0
                             )
                         #小说角色没有绑定角色音频
-                        if role.bind_audio_name == "":
+                        if role.bind_audio_name == "" and supporting_role_bind_obj.get(role_name) is None:
                             #查找没有绑定过和符合性别的音频角色
                             not_bind_role_audio_list = RoleAudio.select().where(RoleAudio.role_name.not_in(has_bind_audio_role_names))
                             print(has_bind_audio_role_names)
@@ -946,8 +948,15 @@ def parse_novel_data_bind_role_audio(text_json,parse_text_json,novel_name):
                                 log(f"角色 {role.role_name} 的出场率为 {str(role.presence_rate)},大于{str(bind_audio_threshold*100)}%，为他/她绑定音频角色：{bind_audio_name}")
                                 print(f"角色 {role.role_name} 的出场率为 {str(role.presence_rate)},大于{str(bind_audio_threshold*100)}%，为他/她绑定音频角色：{bind_audio_name}")
                                 role.save()
+                            #     给达不到出场率要求的配角复用本章音频角色
+                            elif role.role_name != "BUG角色" and supporting_role_bind_obj.get(role.role_name) is None:
+                                supporting_role_bind_obj[role.role_name] = bind_audio_name
                         elif role.bind_audio_name != "":
                             bind_audio_name = role.bind_audio_name
+                        else:
+                            print(f"配角 {role.role_name} 出场率小于配置文件，本章复用音频角色：{bind_audio_name}")
+                            log(f"配角 {role.role_name} 出场率小于配置文件，本章复用音频角色：{bind_audio_name}")
+                            bind_audio_name = supporting_role_bind_obj.get(role.role_name)
                     #如果小说角色绑定了角色音频
                     temp_obj = {
                         "role_name": role_name,

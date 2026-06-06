@@ -2,16 +2,16 @@
     "database_name": "lively_database",
     "api_key": "sk-cp-Ucy_-B-R53NyX2LNNOl1X8pdPyuxvZiwEuufxQwFEH5PkNyymTlZu49K1VZ2jCjwphTIxiAse18lNq2rHh7w6fdakbEzfRgzf_jWVQ-Z_ar2zVE6NcEfkGk",
     "base_url": "https://api.minimaxi.com/v1",
-    "model_name": "MiniMax-M2.7",
+    "model_name": "MiniMax-M3",
     "max_token": 80960,
     "max_section_length": 3000,
     "preload_role_count": 116,
-    "rtf_threshold": 0.8,
+    "rtf_threshold": 0.1,
     "watchdog_auto_recovery": false,
     "watchdog_reload_wait_seconds": 60,
     "watchdog_resume_wait_seconds": 120,
     "watchdog_log_check_lines": 10,
     "inference_steps": 6,
     "speech_speed": 0.9,
-    "bind_audio_presence_rate": 0.1
+    "bind_audio_presence_rate": 0.05
 }
