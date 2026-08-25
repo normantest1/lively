@@ -11,6 +11,7 @@ admin/node_modules/
 run.bat
 test.json
 小说文本.json
+*.txt
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

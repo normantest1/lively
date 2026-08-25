@@ -356,10 +356,10 @@ def split_novel_text_by_content_list(novel_content_list,novel_name):
         return False
 
     TITLE_PATTERNS = [
-        r'^[　]{0,20}[\s]*[第][0-9零一二两三四五六七八九十百千万]+[卷章集回]\s*.{0,15}$'
-        r'^[　]{0,20}[\s]*[0-9零一二两三四五六七八九十百千万]+[卷章集回]\s*.{0,15}$',
-        r'^[　]{0,20}[\s]*[0-9]+[、]\s*.{0,15}$',
-        r'^[　]{0,20}[\s]*[0-9]+\s+.{0,15}$',
+        r'^[　]{0,20}[\s]*[第][0-9零一二两三四五六七八九十百千万]+[卷章集回]\s*.{0,20}$',
+        r'^[　]{0,20}[\s]*[0-9零一二两三四五六七八九十百千万]+[卷章集回]\s*.{0,20}$',
+        r'^[　]{0,20}[\s]*[0-9]+[、]\s*.{0,20}$',
+        r'^[　]{0,20}[\s]*[0-9]+\s+.{0,20}$',
     ]
     section_re = re.compile("|".join(TITLE_PATTERNS), re.MULTILINE)
     input_novel_text_list = novel_content_list
@@ -460,13 +460,14 @@ def split_novel_text_by_content_list(novel_content_list,novel_name):
 def split_novel_text_by_content_list_test(novel_content_list):
     if len(novel_content_list) == 0:
         return False
+
     TITLE_PATTERNS = [
-        r'^[　]{0,20}[\s]*[第][0-9零一二两三四五六七八九十百千万]+[卷章集回]\s*.{0,15}$'
-        r'^[　]{0,20}[\s]*[0-9零一二两三四五六七八九十百千万]+[卷章集回]\s*.{0,15}$',
-        r'^[　]{0,20}[\s]*[0-9零一二两三四五六七八九十百千万]+[、]\s*.{0,15}$',
-        r'^[　]{0,20}[\s]*[0-9零一二两三四五六七八九十百千万]+\s+.{0,15}$',
+        r'^[　]{0,20}[\s]*[第][0-9零一二两三四五六七八九十百千万]+[卷章集回]\s*.{0,20}$',
+        r'^[　]{0,20}[\s]*[0-9零一二两三四五六七八九十百千万]+[卷章集回]\s*.{0,20}$',
+        r'^[　]{0,20}[\s]*[0-9]+[、]\s*.{0,20}$',
+        r'^[　]{0,20}[\s]*[0-9]+\s+.{0,20}$',
     ]
-    section_re = re.compile("|".join(TITLE_PATTERNS),re.MULTILINE)
+    section_re = re.compile("|".join(TITLE_PATTERNS), re.MULTILINE)
     input_novel_text_list = novel_content_list
 
     temp_max_section_text_list = []
@@ -477,12 +478,13 @@ def split_novel_text_by_content_list_test(novel_content_list):
     import utils.config as config
     from bean.beans import Novel, NovelName, Role
     from logger import log as logger_log
-
+    save_the_chapter_name_list = []
     for (index, line) in enumerate(input_novel_text_list):
         if re.match(section_re, line):
-            print(f"章节名称匹配，内容：{line}")
-            line = re.sub(r'\s+', ' ', line)
+
+            # line = re.sub(r'\s+', ' ', line)
             chapter_name = re.sub('(~+|\\*+|\\,+|\\?+|\\，+|\\?+)', '_', line)
+            print(f"匹配到章节名：{chapter_name}")
             if len(chapter_text_list) == 0:
                 chapter_text_list.append(chapter_name)
             else:
@@ -492,6 +494,7 @@ def split_novel_text_by_content_list_test(novel_content_list):
                 chapter_text_list.append(chapter_name)
         else:
             line = line.replace(' ', '').replace('\n', '').replace('\r', '').replace('\t', '')
+
             if line != "" and len(chapter_text_list) > 0:
                 chapter_text_list.append(line)
             if index == len(input_novel_text_list) - 1:
@@ -500,8 +503,21 @@ def split_novel_text_by_content_list_test(novel_content_list):
                 chapter_text_list = []
         temp_max_section_text_list = []
         chapter_names = ""
-    chapter_name_list = []
     try:
+        # db.begin()
+        # NovelName.create(
+        #     novel_name=novel_name
+        # )
+        # Role.create(
+        #     role_name="旁白",
+        #     novel_name=novel_name,
+        #     role_count=1,
+        #     gender="无",
+        #     is_bind=False,
+        #     bind_audio_name="",
+        #     chapter_count=0,
+        #     presence_rate=0,
+        # )
         for (i, chapter_text) in enumerate(chapter_text_array):
             if len(temp_max_section_text_list) == 0:
                 temp_max_section_text_list.extend(chapter_text)
@@ -512,6 +528,7 @@ def split_novel_text_by_content_list_test(novel_content_list):
             character_segmentation_size = config.load_config(config_path, "max_section_length")
             if top_chapter_text_len + current_chapter_text_len > character_segmentation_size:
                 max_section_text_obj_list = array_to_obj_list(0, temp_max_section_text_list)
+                save_the_chapter_name_list.append(chapter_names)
                 # Novel.create(
                 #     section_data_json=json.dumps(max_section_text_obj_list, ensure_ascii=False),
                 #     after_analysis_data_json="",
@@ -519,7 +536,6 @@ def split_novel_text_by_content_list_test(novel_content_list):
                 #     current_state=1,
                 #     chapter_names=chapter_names
                 # )
-                chapter_name_list.append(chapter_names)
                 temp_max_section_text_list = []
                 chapter_names = f"[{chapter_text[0]}]"
                 temp_max_section_text_list.extend(chapter_text)
@@ -527,6 +543,7 @@ def split_novel_text_by_content_list_test(novel_content_list):
                     print("到达最后一章节")
                     logger_log("到达最后一章节")
                     max_section_text_obj_list = array_to_obj_list(0, temp_max_section_text_list)
+                    save_the_chapter_name_list.append(chapter_names)
                     # Novel.create(
                     #     section_data_json=json.dumps(max_section_text_obj_list, ensure_ascii=False),
                     #     after_analysis_data_json="",
@@ -534,13 +551,13 @@ def split_novel_text_by_content_list_test(novel_content_list):
                     #     current_state=1,
                     #     chapter_names=chapter_names
                     # )
-                    chapter_name_list.append(chapter_names)
                 continue
 
             temp_max_section_text_list.extend(chapter_text)
             chapter_names += f" [{chapter_text[0]}]"
             if i == len(chapter_text_array) - 1:
                 max_section_text_obj_list = array_to_obj_list(0, temp_max_section_text_list)
+                save_the_chapter_name_list.append(chapter_names)
                 # Novel.create(
                 #     section_data_json=json.dumps(max_section_text_obj_list, ensure_ascii=False),
                 #     after_analysis_data_json="",
@@ -548,10 +565,12 @@ def split_novel_text_by_content_list_test(novel_content_list):
                 #     current_state=1,
                 #     chapter_names=chapter_names
                 # )
-                chapter_name_list.append(chapter_names)
+        # db.commit()
+        return save_the_chapter_name_list
     except Exception as e:
         traceback.print_exc()
-    return chapter_name_list
+        # get_db().rollback()
+
 if __name__ == '__main__':
     # TODO 添加数据时，得判断小说名是否存在
     # novel_path = "望长天2.txt"
@@ -560,12 +579,20 @@ if __name__ == '__main__':
     # with open(novel_path, "r", encoding="utf-8") as f:
     #     novel_text_list = f.readlines()
     # split_novel_text_by_content_list(novel_text_list, novel_name)
-    with open("我！清理员！(鱼狱圄).txt","r", encoding="utf-8") as f:
+    with open("赤心巡天(情何以甚).txt","r", encoding="utf-8") as f:
         file_lines = f.readlines()
         chapter_name_list = []
+    #     split_novel_text_by_content_list
     chapter_name_list = split_novel_text_by_content_list_test(file_lines)
     for chapter_name in chapter_name_list:
         print(chapter_name)
-    section_re = re.compile(r'^[　]{0,20}[\s]*[第0-9零一二两三四五六七八九十百千万卷章集回，：、]{1,13}\s*.{0,15}$')
-    re_text = "284、独特的影子之争理解方式（修）"
-    print(re.match(section_re, re_text))
+    TITLE_PATTERNS = [
+        r'^[　]{0,20}[\s]*[第][0-9零一二两三四五六七八九十百千万]+[卷章集回]\s*.{0,20}$',
+        r'^[　]{0,20}[\s]*[0-9零一二两三四五六七八九十百千万]+[卷章集回]\s*.{0,20}$',
+        r'^[　]{0,20}[\s]*[0-9]+[、]\s*.{0,20}$',
+        r'^[　]{0,20}[\s]*[0-9]+\s+.{0,20}$',
+    ]
+    section_re = re.compile("|".join(TITLE_PATTERNS), re.MULTILINE)
+    print(re.match(section_re, "第一章 他惊人的毅力并无观众"))
+
+    print(re.match(section_re, "第三章 此恨难偿！"))
